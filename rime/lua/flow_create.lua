@@ -116,6 +116,10 @@ function M.store(ctx)
         end
         -- 形码删掉重填：全码一律用这个词需要的完整形码（没打也会补）
         shape = shapes.expected(phrase) or ""
+        -- 造词专用删除：先把这个词以前的所有入库（各个档位的 pin）删掉，
+        -- 再按这次的全码重新入库——重复造同一个词不会留下旧档位。
+        -- （手动调序的 displace 不做这件事，它只管被顶掉的别的词）
+        order.remove_word(phrase)
         order.insert(sound .. "|" .. shape, phrase, 1)
     end
     ctx:set_property(PROP, "")

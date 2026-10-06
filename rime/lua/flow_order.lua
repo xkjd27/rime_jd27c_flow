@@ -8,7 +8,9 @@
 --   key 格式，不适合当通用 KV，配置成 tabledb 会退回 txt。）
 --
 -- 内存里始终有一份 order[key] = {候选1, 候选2...}，查询 O(1)；
--- 只有 insert/remove/move_down 时才写后端（db 单键写，txt 整文件重写）。
+-- 只有 insert/remove/move_down/remove_word 时才写后端
+-- （db 单键写，txt 整文件重写）。remove_word 是反查删除（造词用）：
+-- leveldb 没有反向索引，但全部 pin 都在内存里（M.order），扫一遍即可。
 --
 -- value 格式：条目用 \t 分隔；条目 = 候选词，或
 --   「候选词 + 空格 + 完整音节」（音码削减过的 pin，如 ``你 ny``），
@@ -268,6 +270,47 @@ function M.remove(key, text)
         M.syllables[key] = nil
     end
     save_key(key)
+end
+
+-- 反查删除（造词用）：把 text 从**所有** key 里删掉，返回删掉的条数。
+-- leveldb 本身没有反向索引，但 init 时已经把全部 pin 读进了内存
+-- （M.order: key -> {词...}），所以反查就是扫一遍内存表；受影响的 key
+-- 逐个写回后端（db 单键写 / txt 整文件重写），不需要额外维护索引。
+function M.remove_word(text)
+    if not text or text == "" then
+        return 0
+    end
+    local removed = 0
+    local keys = {}
+    for key in pairs(M.order) do
+        keys[#keys + 1] = key
+    end
+    for _, key in ipairs(keys) do
+        local list = M.order[key]
+        local hit = false
+        for i = #list, 1, -1 do
+            if list[i] == text then
+                table.remove(list, i)
+                removed = removed + 1
+                hit = true
+            end
+        end
+        if hit then
+            local syls = M.syllables[key]
+            if syls then
+                syls[text] = nil
+                if not next(syls) then
+                    M.syllables[key] = nil
+                end
+            end
+            if #list == 0 then
+                M.order[key] = nil
+                M.syllables[key] = nil
+            end
+            save_key(key)
+        end
+    end
+    return removed
 end
 
 -- 把 text 往下移一位；已在末位则移出手动列表
