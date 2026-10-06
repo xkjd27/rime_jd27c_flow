@@ -221,6 +221,22 @@ def load_shape_entries(path):
     return entries
 
 
+def load_original_first(path):
+    """原版 danzi 里 code 恰好 1/2 键的精确条目：一简（1 键）/ 全码（2 键）。
+
+    原版每个字只有一个精确全码（形码只用于消歧），所以这些精确条目
+    就是原版在 s / sy 上的首选。返回 {码: 首选字}。
+    """
+    first = {}
+    for row in iter_dict_rows(path):
+        if len(row) < 2:
+            continue
+        text, code = row[0].strip(), row[1].strip()
+        if text and len(code) in (1, 2):
+            first.setdefault(code, text)
+    return first
+
+
 def load_dict(path, default_weight=1.0):
     """读取标准拼音词库。
 
@@ -442,6 +458,32 @@ def build_danzi(char_codes, initial_weight):
     return entries
 
 
+def align_original_first(danzi, first):
+    """把原版 1 键/2 键首选字的权重抬到同码第一（其余顺序不动）。
+
+    返回 (调整数, 缺字数)；缺字指原版首选在 ZiDB 读音里对不上。
+    """
+    per_code = {}
+    for (text, code), weight in danzi.items():
+        per_code.setdefault(code, []).append((text, weight))
+    changed = 0
+    missing = 0
+    for code, char in first.items():
+        entries = per_code.get(code)
+        if not entries:
+            missing += 1
+            continue
+        weights = dict(entries)
+        if char not in weights:
+            missing += 1
+            continue
+        others = max((w for t, w in entries if t != char), default=0.0)
+        if weights[char] <= others:
+            danzi[(char, code)] = others + 1.0
+            changed += 1
+    return changed, missing
+
+
 def build_cizu(word_entries, vocab_entries, char_codes,
                abbrev_weight, default_weight):
     entries = {}
@@ -581,6 +623,8 @@ def main():
                         help='rime-ice 仓库路径（默认 %(default)s；不存在则只生成 simp）')
     parser.add_argument('--rime-ice-tencent', action='store_true',
                         help='同时引入 rime-ice tencent（无拼音，自动注音）')
+    parser.add_argument('--no-align-original', action='store_true',
+                        help='不按原版 1 键/2 键首选调整单字权重')
     parser.add_argument('--out', default=os.path.normpath(
                             os.path.join(here, '..', 'rime')),
                         help='输出目录（默认 %(default)s）')
@@ -662,6 +706,16 @@ def main():
     char_codes = build_char_codes(zidb, zidb_static, char_w,
                                   char_reading_w, args.default_weight)
     danzi = build_danzi(char_codes, args.initial_weight)
+    orig_danzi = os.path.join(args.source, 'rime', 'xkjd27c.danzi.dict.yaml')
+    if args.no_align_original:
+        print('原版首选对齐：已关闭')
+    elif os.path.exists(orig_danzi):
+        first = load_original_first(orig_danzi)
+        changed, missing = align_original_first(danzi, first)
+        print('原版首选对齐：%d 个码（调整 %d，缺字 %d）'
+              % (len(first), changed, missing))
+    else:
+        print('原版首选对齐：找不到 %s，跳过' % orig_danzi)
     shape_dict = load_shape_entries(
         os.path.join(args.source, 'rime', 'xkjd27c.buchong.dict.yaml'))
 

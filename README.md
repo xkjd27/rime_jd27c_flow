@@ -270,6 +270,7 @@ python3 tools/build_flow_dict.py
 --words PATH           追加标准拼音词库（词/拼音/权重），可重复；两个变体都加
 --rime-ice DIR         rime-ice 仓库路径（默认 /tmp/rime-ice）
 --rime-ice-tencent     再引入 rime-ice tencent（无拼音，自动注音）
+--no-align-original    不按原版 1 键/2 键首选调整单字权重
 --abbrev-weight FLOAT  节奏码词频系数（默认 1.0）
 --initial-weight FLOAT 1 键声母码词频系数（默认 1.0）
 --weight-scale FLOAT   全局词频缩放（默认 1）
@@ -279,6 +280,9 @@ python3 tools/build_flow_dict.py
 生成规则：
 
 * 单字：键道音码全码 + 1 键声母码；词频取字频源。
+* 单字首选对齐原版：读原版 `xkjd27c.danzi` 里 code 恰好 1/2 键的条目
+  （一简 / 全码），把该字权重抬到同码第一，保证 `l`→了、`lf`→乐、
+  `wu`→握 这类默认首选与原版一致；清单见 `docs/orig-first.txt`。
 * 词组（键道原版简码）：
   * 2 字：音音全码（我们 → `wu mk`）；
   * 3 字：3 个首字母（为什么 → `w u m`）；
@@ -331,7 +335,7 @@ printf 'patch:\n  schema_list:\n    - schema: xkjd27c_flow\n' \
 rime/     Rime 方案、词库（.ice 默认 / .simp）、单字表、纯形码表（shape）、期望形码表
 rime/lua/ 节奏校验、形码筛选 / 顶功（Lua）
 tools/    码表生成脚本、librime 测试器
-docs/     布局图、设计记录（docs/cadence.md）
+docs/     布局图、设计记录（cadence.md）、原版首选清单（orig-first.txt）
 ```
 
 ## 致谢与许可
