@@ -270,40 +270,6 @@ function M.remove(key, text)
     save_key(key)
 end
 
--- 整体替换 key 的 pin 列表（用于本级下移）
-function M.set_list(key, texts)
-    if not texts or #texts == 0 then
-        M.order[key] = nil
-        M.syllables[key] = nil
-        save_key(key)
-        return
-    end
-    local list = {}
-    for _, t in ipairs(texts) do
-        list[#list + 1] = t
-    end
-    M.order[key] = list
-    local syls = M.syllables[key]
-    if syls then
-        for t in pairs(syls) do
-            local found = false
-            for _, x in ipairs(list) do
-                if x == t then
-                    found = true
-                    break
-                end
-            end
-            if not found then
-                syls[t] = nil
-            end
-        end
-        if not next(syls) then
-            M.syllables[key] = nil
-        end
-    end
-    save_key(key)
-end
-
 -- 把 text 往下移一位；已在末位则移出手动列表
 function M.move_down(key, text)
     local list = M.order[key]

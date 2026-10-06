@@ -178,51 +178,19 @@ local function lower_or_extend(ctx)
         ctx:refresh_non_confirmed_composition()
         return
     end
+    -- 补码升档：本级首位让给下一个候选（`uyhs=` 后重打 `uyhs` 由「事后」接替）
+    local seg = ctx.composition and ctx.composition:back()
+    if seg and seg.selected_index == 0 then
+        local second = seg:get_candidate_at(1)
+        if second and second.text and second.text ~= "" then
+            order.insert(key, second.text, 1)
+        end
+    end
     order.remove(key, cand.text)
     shape = shape .. next
     order.insert(input .. "|" .. shape, cand.text, 1)
     ctx:set_property(PROP, shape)
     ctx:refresh_non_confirmed_composition()
-end
-
--- `=` 下调：把当前候选在本级往下沉一位（写进 pin，持久化）；
--- 高亮跟着被下沉的候选走，连按可以一路往下沉。
--- 已是本级最后一个（下面没人）时返回 false，由调用方处理。
-local function demote(ctx)
-    local seg = ctx.composition and ctx.composition:back()
-    if not seg or not ctx:get_selected_candidate() then
-        return false
-    end
-    local idx = seg.selected_index or 0
-    local texts = {}
-    for i = 0, idx + 1 do
-        local c = seg:get_candidate_at(i)
-        if not c or not c.text or c.text == "" then
-            return false
-        end
-        texts[#texts + 1] = c.text
-    end
-    -- 交换当前候选和它下面那一位
-    texts[idx + 1], texts[idx + 2] = texts[idx + 2], texts[idx + 1]
-    -- 原 pin 列表里不在菜单前缀的条目保留在后面
-    local key = ctx.input .. "|" .. get_shape(ctx)
-    local seen = {}
-    for _, t in ipairs(texts) do
-        seen[t] = true
-    end
-    local old = order.get(key)
-    if old then
-        for _, t in ipairs(old) do
-            if not seen[t] then
-                seen[t] = true
-                texts[#texts + 1] = t
-            end
-        end
-    end
-    order.set_list(key, texts)
-    ctx:refresh_non_confirmed_composition()
-    ctx:highlight(idx + 1)
-    return true
 end
 
 local function processor(key_event, env)
@@ -289,11 +257,7 @@ local function processor(key_event, env)
         if ctx:has_menu() and ctx:get_selected_candidate() then
             if code == KEY_MINUS then
                 promote(ctx)
-            elseif get_shape(ctx) == "" and #ctx.input == 1 then
-                -- 1 键级别：还原完整音节（原行为）
-                lower_or_extend(ctx)
-            elseif not demote(ctx) then
-                -- 已是本级最后一个：保留原来的升档行为
+            else
                 lower_or_extend(ctx)
             end
             return 1
