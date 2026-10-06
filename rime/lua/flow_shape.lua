@@ -13,7 +13,6 @@
 --     （hjmovo -> hjmov -> hjmo -> hjm，只留最终一级的 pin）；
 --     若目标级别已被其他候选占据，被顶掉的候选沿它自己的下一笔形码
 --     自动顺延（继续冲突则继续顺延），而不是回到自然排序；
---     可用 flow_order/displace: false 关闭顺延；
 --   * `-` 降档/上调：单字全码（声韵，2 键）在最短级别再按 `-` 会削到
 --     1 键简码（ny -> n，如把「你」提到 n），并把完整音节 ny 记进 order；
 --   * `=` 升档/下调：1 键级别优先用记录的音节还原（n -> ny），没有记录
@@ -76,13 +75,8 @@ end
 -- 把 text 放到 input|shape 的首位；目标位若已被其他候选占据，
 -- 被顶掉的候选沿它自己的形码串顺延到下一级，递归直到有空位；
 -- 已到完整形码仍无空位则丢弃该 pin（回归自然排序）。
--- flow_order/displace: false 时退化为直接插到首位。
 -- syl 非空时表示这是一次音码削减，完整音节会随 pin 保存。
 local function place(text, input, shape, syl)
-    if not order.displace then
-        order.insert(input .. "|" .. shape, text, 1, syl)
-        return
-    end
     local function put(t, s, sy, depth)
         if depth > MAX_SHAPE + 1 then
             return

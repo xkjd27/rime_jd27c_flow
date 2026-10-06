@@ -28,7 +28,6 @@ M.key_prefix = "ord/"
 M.ready = false
 M.users = 0
 M.backend = "leveldb"
-M.displace = true   -- `-` 上调时被顶掉的候选是否顺延（flow_order/displace）
 M.recent_max = 20   -- 最近造词记录上限（flow_order/recent_max）
 M.name = nil
 M.path = nil   -- txt 后端文件
@@ -206,11 +205,6 @@ function M.init(env)
     end
     M.backend = backend
     M.name = name
-    local displace = cfg:get_bool("flow_order/displace")
-    if displace == nil then
-        displace = true
-    end
-    M.displace = displace
     local rmax = cfg:get_int("flow_order/recent_max")
     if rmax and rmax > 0 then
         M.recent_max = rmax

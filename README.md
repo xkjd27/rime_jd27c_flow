@@ -208,7 +208,6 @@
   → hjmo=哈基米、hjmov=喊救命；原来 hjmov 上的候选继续顺延
   ```
 
-  可用 `flow_order/displace: false` 关闭顺延（被顶掉的候选留在原位后面）。
 * `=`（升档）：
   * 给当前候选**补上下一笔形码**并 pin 到更长一级，输入变成带形码的串
     （`uyhs=` → `uyhso`；`hjm` → `hjmo` → … → 完整形码）；
@@ -230,15 +229,9 @@
 
   文本文件为 `xkjd27c_flow.order.txt`（`key\t候选1\t候选2`，key 形如 `hjm|ov`；
   音码削减过的候选写作 `候选 完整音节`，如 `n|\t你 ny`）。
-* 顶替顺延：默认开启（`flow_order/displace: true`）；关闭则 `-` 直接插到目标 key 首位，
-  被顶掉的候选留在原位后面：
-
-  ```yaml
-  # xkjd27c_flow.custom.yaml
-  patch:
-    flow_order/displace: false
-  ```
-
+* 顶替顺延：`-`/`=` 把候选 pin 到目标 key 时，如果该位置已被别的候选
+  占据，被顶掉的候选会沿它自己的下一笔形码自动顺延（继续冲突就继续
+  顺延），而不是掉回自然排序。
 * 清空调序：删掉对应的 DB 目录/文本文件即可。
 
 ## 次简（Tab）
