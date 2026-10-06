@@ -1,20 +1,22 @@
 # Rime schema
 # encoding: utf-8
 #
-# 键道27C Flow —— 星空键道27C 音码整句方案
+# 键道27C Flow —— 星空键道27C 音码方案
 #
 # 只保留键道27C 的音码（声母 + 韵母，一字两码），
-# 支持常规整句连打。码表由 tools/build_flow_dict.py 生成。
-# 整句由 script_translator 负责（与 Rime 双拼方案同一套引擎）。
+# 词组用键道原版简码，逐词上屏（四码 / 形码顶功）。
+# 码表由 tools/build_flow_dict.py 生成。
+# 引擎仍用 script_translator：笔码连打与兵底候选需要它的整句合成。
 
 schema:
   schema_id: xkjd27c_flow
   name: 键道27C・流
   version: "1.0"
   description: |
-    键道27C 音码整句输入方案。
+    键道27C 音码方案。
     声母、韵母沿用键道27C 布局，一字两码；
-    支持整句连打，码表来自键道27C 并带词频。
+    词组用键道原版简码，逐词上屏；支持形码筛选与纯笔码查表。
+    码表来自键道27C 并带词频。
   author:
     - 吅吅大山（键道27C 布局）
     - 由 rime_jd27c 的码表生成
@@ -55,18 +57,15 @@ engine:
 
 speller:
   alphabet: "abcdefghijklmnopqrstuvwxyz;"
-  initials: "abcdefghijklmnopqrstuvwxyz;"
-  auto_select: false
 
 translator:
   # 词库变体：.ice（rime-ice，默认）| .simp（pinyin_simp）
   # 切到 simp：xkjd27c_flow.custom.yaml 里 patch 本项
   dictionary: xkjd27c_flow.ice
-  enable_charset_filter: false
-  enable_completion: true
   enable_user_dict: false
-  max_homophones: 8
-  max_sentences: 1
+  # 补全/整句相关项（enable_completion、enable_charset_filter、
+  # max_homophones、max_sentences）对本方案候选无影响（已实测），
+  # 不写：librime 默认值即可。
 
 # 手动调序存储后端：leveldb（默认）| txt（纯文本，方便手改/调试）
 # 用户可在 xkjd27c_flow.custom.yaml 里 patch：flow_order/backend: txt
