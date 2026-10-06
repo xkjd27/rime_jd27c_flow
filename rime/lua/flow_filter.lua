@@ -10,6 +10,7 @@
 local order = require("flow_order")
 local shapes = require("flow_shapes")
 local codes = require("flow_codes")
+local words = require("flow_words")
 
 local ready = false
 local hint_on = true
@@ -175,18 +176,57 @@ local function filter(translation, env)
     local input = ctx.input
     local input_len = #input
     local shape = ctx:get_property("flow_shape") or ""
+    local creating = ctx:get_property("flow_create") == "1"
     local key = input .. "|" .. shape
 
-    -- 先收集整段（且符合形码）的候选
+    -- 造词模式按当前段（分词后可能不是从 0 开始）收集候选；
+    -- 普通模式要求候选覆盖整段输入
+    local span_start, span_end = 0, input_len
+    if creating then
+        local seg = ctx.composition and ctx.composition:back()
+        if seg then
+            span_start, span_end = seg.start, seg._end
+        end
+    end
+
     local base = {}
     for cand in translation:iter() do
-        if full_span(cand, input_len) and shapes.match(cand.text, shape) then
+        if (cand._start or 0) == span_start and (cand._end or 0) == span_end
+                and shapes.match(cand.text, shape) then
             base[#base + 1] = cand
         end
     end
     if #base == 0 then
         return
     end
+
+    -- 造词入库的用户词：命中时提到最前（仅普通模式，造词模式按段看不注入）
+    if not creating then
+        local extra = words.match(input)
+        if #extra > 0 then
+            local n = 0
+            for _, text in ipairs(extra) do
+                if shapes.match(text, shape) then
+                    local found
+                    for i, cand in ipairs(base) do
+                        if cand.text == text then
+                            found = i
+                            break
+                        end
+                    end
+                    local cand
+                    if found then
+                        cand = table.remove(base, found)
+                    else
+                        cand = Candidate("flow_words", 0, input_len, text, "")
+                    end
+                    table.insert(base, 1 + n, cand)
+                    n = n + 1
+                end
+            end
+        end
+    end
+
     local chosen = apply_manual_order(base, key)
 
     -- 纯笔码输入：手动 pin 优先，其余保持原顺序，不发音码/形码提示
@@ -221,6 +261,24 @@ local function filter(translation, env)
     end
 
     top_cache[key] = current_top
+
+    -- 造词模式：不计算提示；首选上显示整条 composition 的全码
+    if creating and final[1] then
+        local ct = ctx:get_commit_text()
+        local seg_raw = input:sub(span_start + 1, span_end)
+        local phrase = ct
+        if seg_raw ~= "" and ct:sub(-#seg_raw) == seg_raw then
+            phrase = ct:sub(1, #ct - #seg_raw) .. final[1].text
+        end
+        local full = codes.full_code(phrase, input)
+        final[1].comment = full and ("全码 " .. full) or "全码 ?"
+        for _, cand in ipairs(final) do
+            annotate(cand, shape)
+            yield(cand)
+        end
+        return
+    end
+
     local ctx = {}
     for _, cand in ipairs(final) do
         apply_hint(cand, input, shape, base, excluded, current_top, ctx)
@@ -236,6 +294,7 @@ end
 local function init(env)
     order.init(env)
     codes.init(env)
+    words.init(env)
     ready = shapes.init(env)
     local h = env.engine.schema.config:get_bool("flow_hint")
     if h ~= nil then

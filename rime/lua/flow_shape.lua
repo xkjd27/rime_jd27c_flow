@@ -35,12 +35,14 @@
 local order = require("flow_order")
 local shapes = require("flow_shapes")
 local codes = require("flow_codes")
+local create = require("flow_create")
 
 local SHAPE_KEYS = { a = true, e = true, i = true, o = true, v = true }
 local PROP = "flow_shape"
 local MAX_SHAPE = 12
 local XK_BACKSPACE = 0xff08
 local XK_RETURN = 0xff0d
+local XK_ESCAPE = 0xff1b
 local KEY_MINUS = 0x2d
 local KEY_EQUAL = 0x3d
 
@@ -189,6 +191,26 @@ local function processor(key_event, env)
     end
     local ctx = env.engine.context
     local code = key_event.keycode
+    create.tick(ctx)
+    local is_create = create.active(ctx)
+
+    -- ` / ~：从空输入进入造词模式
+    if create.is_trigger(code) then
+        if is_create then
+            return 1
+        end
+        if not ctx:is_composing() then
+            create.enter(ctx)
+            return 1
+        end
+        return 2
+    end
+
+    -- Esc：退出造词模式（输入交给 editor 清掉）
+    if is_create and code == XK_ESCAPE then
+        create.exit(ctx)
+        return 2
+    end
 
     -- BackSpace：优先删形码
     if code == XK_BACKSPACE then
@@ -197,11 +219,33 @@ local function processor(key_event, env)
             set_shape(ctx, s:sub(1, -2))
             return 1
         end
+        if is_create and #ctx.input <= 1 then
+            create.exit(ctx)
+        end
         return 2
     end
 
-    -- `-` / `=`：手动调序
+    -- 造词模式：空格/数字用于分词选择，不触发上屏
+    if is_create then
+        if code == 0x20 then
+            if not ctx:has_menu() then
+                return 1  -- 空段/无候选：不要落到 Editor::Confirm 的 Commit
+            end
+            return 2      -- 交给 Editor::Confirm 确认当前段（_auto_commit 已关）
+        end
+        if code >= 0x30 and code <= 0x39 and not ctx:has_menu() then
+            return 1  -- 防止落到 express_editor 的 DirectCommit
+        end
+    end
+
+    -- `-` / `=`：造词模式 `-` 入库（并退出），`=` 无效；否则手动调序
     if code == KEY_MINUS or code == KEY_EQUAL then
+        if is_create then
+            if code == KEY_MINUS then
+                create.store(ctx)
+            end
+            return 1
+        end
         if ctx:has_menu() and ctx:get_selected_candidate() then
             if code == KEY_MINUS then
                 promote(ctx)
@@ -252,6 +296,10 @@ local function processor(key_event, env)
 
     -- 音码键
     if key:match("^[a-z;]$") then
+        if is_create then
+            -- 造词模式：禁用顶功/四码自动上屏
+            return 2
+        end
         local s = get_shape(ctx)
         if s ~= "" then
             -- 顶码（形码）后自动上屏
@@ -272,9 +320,11 @@ local function init(env)
     order.init(env)
     shapes.init(env)
     codes.init(env)
+    create.init(env)
     env.flow_shape_conn = env.engine.context.commit_notifier:connect(
         function(ctx)
             ctx:set_property(PROP, "")
+            create.reset(ctx)
         end)
 end
 
@@ -283,6 +333,7 @@ local function fini(env)
         env.flow_shape_conn:disconnect()
         env.flow_shape_conn = nil
     end
+    create.close()
     order.close()
 end
 
