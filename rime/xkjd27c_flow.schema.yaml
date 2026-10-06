@@ -80,6 +80,9 @@ flow_order:
 # 候选提示：非首选候选右侧显示「让它成为首选还需要按的键」
 # （声码未输完补声码，输完则给形码）；设为 false 关闭
 flow_hint: true
+# 只给前 N 个候选算提示（提示要模拟筛选，候选多了耗时间）；
+# 0 = 不限，翻页后的候选也有提示
+flow_hint_limit: 20
 
 jffh:
   opencc_config: s2t.json
