@@ -88,6 +88,13 @@ def transform_py(pinyin):
     return PY_TRANSFORM.get(pinyin, pinyin)
 
 
+def normalize_py(pinyin):
+    """拼音归一化（去声调、统一 ü 拼写），用于按读音对齐权重。"""
+    pinyin = re.sub(r'\d+', '', pinyin.strip().lower())
+    pinyin = pinyin.replace('ü', 'v').replace('u:', 'v')
+    return transform_py(pinyin)
+
+
 def sheng(py):
     if py in PY_SHENG:
         return PY_SHENG[py]
@@ -196,12 +203,14 @@ def iter_dict_rows(path):
 def load_dict(path, default_weight=1.0):
     """读取标准拼音词库。
 
-    返回 ``(char_w, words, vocab, stats)``：
+    返回 ``(char_w, char_reading_w, words, vocab, stats)``：
       * char_w[char] = 字频（取各读音最大）
+      * char_reading_w[(char, 拼音)] = 按读音的字频（取各来源最大）
       * words = [(word, [pinyin...], weight)]  （带拼音）
       * vocab = [(word, weight)]               （无拼音，靠单字表自动注音）
     """
     char_w = {}
+    char_reading_w = {}
     words = []
     vocab = []
     stats = {'rows': 0, 'chars': 0, 'words': 0, 'vocab': 0, 'skipped': 0}
@@ -230,6 +239,9 @@ def load_dict(path, default_weight=1.0):
                 syllables = pinyin.split()
                 if len(syllables) == 1:
                     char_w[text] = max(char_w.get(text, 0.0), w)
+                    key = (text, normalize_py(syllables[0]))
+                    char_reading_w[key] = max(
+                        char_reading_w.get(key, 0.0), w)
             else:
                 char_w[text] = max(char_w.get(text, 0.0), w)
             stats['chars'] += 1
@@ -246,7 +258,7 @@ def load_dict(path, default_weight=1.0):
             vocab.append(
                 (text, weight if weight is not None else default_weight))
             stats['vocab'] += 1
-    return char_w, words, vocab, stats
+    return char_w, char_reading_w, words, vocab, stats
 
 
 def load_zidb(path):
@@ -301,10 +313,18 @@ def load_zidb_static(path):
 # 音码生成
 # ---------------------------------------------------------------------------
 
-def build_char_codes(zidb, zidb_static, char_w, default_weight):
-    """char -> [(全码, 声母码, 权重)]，含 static 音码与多音字。"""
+def build_char_codes(zidb, zidb_static, char_w, char_reading_w, default_weight):
+    """char -> [(全码, 声母码, 权重)]，含 static 音码与多音字。
+
+    权重优先取词库里的按读音字频（见 jian=3460998 / 见 xian=34609）；
+    没有则退回「字频 × 键道短码长度衰减」（每长一码低一个数量级），
+    再没有字频才用 default_weight 对应的缺省值。
+    """
     raw = {}
     for char, pinyins in zidb:
+        lens = [w for _, w in pinyins if w > 0]
+        base_len = min(lens) if lens else 5
+        cw = char_w.get(char)
         for py, jd_w in pinyins:
             if jd_w <= 0:  # 键道标记的无理读音
                 continue
@@ -312,8 +332,12 @@ def build_char_codes(zidb, zidb_static, char_w, default_weight):
             if not r:
                 continue
             full, init = r
-            weight = (char_w.get(char)
-                      or 10 ** (5 - min(jd_w, 5)))
+            weight = char_reading_w.get((char, normalize_py(py)))
+            if weight is None:
+                if cw is not None:
+                    weight = cw * (10.0 ** (base_len - jd_w))
+                else:
+                    weight = 10.0 ** (5 - min(jd_w, 5))
             raw.setdefault(char, []).append((full, init, weight))
     for char, code in zidb_static:
         raw.setdefault(char, []).append((code, code[0], default_weight))
@@ -555,15 +579,18 @@ def main():
 
     # ---------------- 数据源 ----------------
     char_w = {}
+    char_reading_w = {}
     word_entries = []
     vocab_entries = []
     total_stats = {'rows': 0, 'words': 0, 'vocab': 0, 'skipped': 0}
     sources = []
 
     def absorb(path, use_words=True):
-        cw, words, vocab, stats = load_dict(path, args.default_weight)
+        cw, crw, words, vocab, stats = load_dict(path, args.default_weight)
         for ch, w in cw.items():
             char_w[ch] = max(char_w.get(ch, 0.0), w)
+        for key, w in crw.items():
+            char_reading_w[key] = max(char_reading_w.get(key, 0.0), w)
         total_stats['rows'] += stats['rows']
         if use_words:
             word_entries.extend(words)
@@ -604,7 +631,7 @@ def main():
         os.path.join(args.source, 'Lambda', 'ZiDB', '静态.txt'))
 
     char_codes = build_char_codes(zidb, zidb_static, char_w,
-                                  args.default_weight)
+                                  char_reading_w, args.default_weight)
     danzi = build_danzi(char_codes, args.initial_weight)
     cizu, skipped = build_cizu(word_entries, vocab_entries, char_codes,
                                args.abbrev_weight, args.default_weight)
