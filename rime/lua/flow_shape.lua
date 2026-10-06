@@ -202,11 +202,13 @@ local function processor(key_event, env)
     create.tick(ctx)
     local is_create = create.active(ctx)
 
-    -- ` / ~：从空输入进入造词模式（标记会进输入串）
+    -- `：从空输入进入造词模式（标记进输入串）；
+    -- 造词中再按 ` 视为非法内容：已输内容连同这个 ` 直接上屏（交给标点/编辑器）
     local mark = create.is_trigger(code)
     if mark then
         if is_create then
-            return 1
+            create.exit(ctx)
+            return 2
         end
         if not ctx:is_composing() then
             create.enter(ctx, mark)
@@ -234,13 +236,16 @@ local function processor(key_event, env)
         return 2
     end
 
-    -- 造词模式：空格/数字用于分词选择，不触发上屏
+    -- 造词模式：空格/数字用于分词选择；
+    -- 还没打码（只有 `）或无候选时，空格视为非法内容，直接上屏退出
     if is_create then
         if code == 0x20 then
-            if not ctx:has_menu() then
-                return 1  -- 空段/无候选：不要落到 Editor::Confirm 的 Commit
+            local code_part = create.strip_marker(ctx.input)
+            if code_part == "" or not ctx:has_menu() then
+                create.exit(ctx)
+                return 2  -- Editor::Confirm → ConfirmCurrentSelection || Commit
             end
-            return 2      -- 交给 Editor::Confirm 确认当前段（_auto_commit 已关）
+            return 2      -- 分词：确认当前段（_auto_commit 已关，不上屏）
         end
         if code >= 0x30 and code <= 0x39 and not ctx:has_menu() then
             return 1  -- 防止落到 express_editor 的 DirectCommit
@@ -270,8 +275,11 @@ local function processor(key_event, env)
     -- （后者只提交 ctx.input，会丢掉 flow_shape 里的形码）
     if code == XK_RETURN then
         if ctx:is_composing() then
-            local text = create.strip_marker(ctx.input) .. get_shape(ctx)
+            local text = ctx.input .. get_shape(ctx)
             if text ~= "" then
+                if is_create then
+                    create.exit(ctx)
+                end
                 -- engine:commit_text 不会触发 commit_notifier，手动清形码状态
                 ctx:set_property(PROP, "")
                 ctx:clear()

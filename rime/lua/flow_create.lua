@@ -18,11 +18,11 @@ local words = require("flow_words")
 local M = {}
 
 local PROP = "flow_create"
--- 造词模式的开始标记；这些键从空输入进入造词，并原样放进输入串
--- （用户看得到当前状态，`-` 入库时去掉）
-local TRIGGERS = { [0x60] = "`", [0x7e] = "~" }
--- 可能出现在输入/ composition 开头的标记（含全角）
-local MARKERS = { "`", "~", "｀", "～" }
+-- 造词模式的开始标记：只认半角 backtick。它从空输入进入造词，并原样放进
+-- 输入串（用户看得到当前状态，`-` 入库时去掉）。
+local TRIGGERS = { [0x60] = "`" }
+-- 可能出现在 composition 开头的标记（全角形位也认，兼容全角模式下的标点候选）
+local MARKERS = { "`", "｀" }
 
 local on_state = false
 local saved_auto = true
