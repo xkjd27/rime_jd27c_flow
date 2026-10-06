@@ -1,18 +1,15 @@
 -- 键道27C Flow —— 造词存储（用户词库）
 --
--- 造词模式（` 开头，见 flow_shape.lua）按 `-` 时把当前 composition 的文字
--- 反推成全码存进来；之后在普通模式下它会作为候选注入。
+-- 造词模式（` 开头，见 flow_shape.lua）按 `-` 时把「音码 + 形码」当作
+-- 全码存进来（如 其实我觉得 → quwdvoeoeeoi）；之后在普通模式下输入同一串
+-- 会被注入到候选最前。
 --
 -- 存储：Rime 原生 leveldb -> <user>/xkjd27c_flow.words.userdb/
---   key   = "w/" .. 词组全码（各字 2 键音码拼接；推导失败时退回输入串）
+--   key   = "w/" .. 全码（音码 + 形码，造词时实际打出的那串）
 --   value = 词条，多个用 \t 分隔
 --
--- 命中规则（查询走内存，见 M.match）：
---   1. 输入恰好等于全码；
---   2. 输入等于候选文字按方案规则推导出的码（2 字全码 / 3 字以上简码，
---      含多音字变体，复用 flow_codes.build_codes）。
-
-local codes = require("flow_codes")
+-- 命中规则：输入（音码 + 形码）恰好等于全码。要更短的前缀/权重，用普通模式的
+-- `-` 一级一级把词升上去（写进 flow_order 的 pin）。
 
 local M = {}
 M.entries = {}  -- key -> { 词条, ... }
@@ -104,7 +101,7 @@ function M.close()
     M.ready = false
 end
 
--- 入库：全码 key -> 词条
+-- 入库：全码（音码 + 形码）-> 词条
 function M.add(key, word)
     if not M.ready or not M.db or key == "" or word == "" then
         return false
@@ -124,30 +121,18 @@ function M.add(key, word)
     return true
 end
 
--- 输入 input 时命中的用户词（全码精确 / 方案码精确）
-function M.match(input)
-    if not M.ready or not M.db or input == "" then
+-- 输入 code（音码 + 形码）恰好命中时返回用户词
+function M.match(code)
+    if not M.ready or not M.db or code == "" then
         return {}
     end
-    local out, seen = {}, {}
-    local function push(w)
-        if not seen[w] then
-            seen[w] = true
-            out[#out + 1] = w
-        end
+    local list = M.entries[code]
+    if not list or #list == 0 then
+        return {}
     end
-    local list = M.entries[input]
-    if list then
-        for _, w in ipairs(list) do
-            push(w)
-        end
-    end
-    for _, words_list in pairs(M.entries) do
-        for _, w in ipairs(words_list) do
-            if not seen[w] and codes.has_code(w, input) then
-                push(w)
-            end
-        end
+    local out = {}
+    for _, w in ipairs(list) do
+        out[#out + 1] = w
     end
     return out
 end

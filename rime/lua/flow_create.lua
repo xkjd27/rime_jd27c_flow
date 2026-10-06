@@ -4,15 +4,15 @@
 --   * 普通输入，但禁用顶功/四码自动上屏（临时关掉 _auto_commit）；
 --   * 不计算候选提示（flow_filter 负责）；
 --   * 空格/数字用于分词选择（确认当前段 / 选第 N 个候选），都不上屏；
---   * `-`：把当前 composition 的文字（各段选择拼起来）反推全码写入
---     flow_words 的 LevelDB，退出造词模式并把输入重写成全码；
+--   * `-`：把「音码 + 形码」（实际打出来的那串）作为全码 → 词组文字写入
+--     flow_words 的 LevelDB，退出造词模式并还原成普通输入（保留形码）；
+--     之后继续按 `-` 可以一级一级剥形码调整权重；
 --   * `=` 无效；Esc，或退格到空输入退出。
 --
 -- _auto_commit 的恢复：主动退出（Esc / `-` / 退到底）立即恢复；经由
 -- 上屏结束时（Enter 等走 commit_notifier）延后到下一次按键，避免在
 -- commit_notifier 里触发 composition 刷新。
 
-local codes = require("flow_codes")
 local words = require("flow_words")
 
 local M = {}
@@ -88,28 +88,34 @@ function M.tick(ctx)
     end
 end
 
--- `-`：composition 文字 -> 全码入库，退出造词模式，输入重写成全码，
--- 之后按普通候选参与 `-`/`=` 调频。
+-- `-`：把「音码 + 形码」当作这个词的全码入库（如 其实我觉得 →
+-- quwdvoeoeeoi）；退出造词模式并还原成普通输入（保留形码），
+-- 之后可以继续按 `-` 一格一格剥形码，把词调到想要的级别/权重。
 function M.store(ctx)
     local seg = ctx.composition and ctx.composition:back()
     if seg and not ctx:has_menu() and (seg._end - seg.start) > 0 then
         -- 当前段是没有候选的原始输入，不当词存
         return
     end
-    local code_input = M.strip_marker(ctx.input)
+    local sound = M.strip_marker(ctx.input)
+    local shape = ctx:get_property("flow_shape") or ""
     local phrase = M.strip_marker(ctx:get_commit_text())
+    local code = sound .. shape
     local key
-    if phrase ~= "" and code_input ~= "" then
-        key = codes.full_code(phrase, code_input) or code_input
-    end
-    if key and key ~= "" then
+    if phrase ~= "" and code ~= "" then
+        key = code
         words.add(key, phrase)
     end
     ctx:set_property(PROP, "")
     restore(ctx)
     ctx:clear()
-    if key and key ~= "" then
-        ctx:push_input(key)
+    if key then
+        -- 回到普通模式：音码进输入、形码留在 shape；词已在候选首位，
+        -- 继续按 `-` 就能一级一级升上去
+        ctx:set_property("flow_shape", shape)
+        ctx:push_input(sound)
+    else
+        ctx:set_property("flow_shape", "")
     end
 end
 

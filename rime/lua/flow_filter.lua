@@ -201,9 +201,9 @@ local function filter(translation, env)
         return
     end
 
-    -- 造词入库的用户词：命中时提到最前（仅普通模式，造词模式按段看不注入）
+    -- 造词入库的用户词：输入（音码 + 形码）命中时提到最前
     if not creating then
-        local extra = words.match(input)
+        local extra = words.match(input .. shape)
         if #extra > 0 then
             local n = 0
             for _, text in ipairs(extra) do
