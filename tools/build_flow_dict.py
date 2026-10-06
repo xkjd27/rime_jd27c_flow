@@ -1,0 +1,636 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Build sound-only (音码) dictionaries for the ``xkjd27c_flow`` schema.
+
+数据源
+------
+* ``Lambda/ZiDB``（rime_jd27c 仓库）：单字表，提供键道读音与音码；
+* 标准拼音词库：``词\\t拼音\\t权重``，构建时把拼音转成键道音码。
+  默认 ``pinyin_simp.dict.yaml``（Rime 自带）；
+  可用 ``--rime-ice DIR`` 引入 rime-ice 的 ``base`` / ``ext`` / ``others``；
+* 纯权重词库：``词\\t权重``（如 rime-ice ``tencent``），
+  用单字表读音自动注音（``--rime-ice-tencent`` 启用）。
+
+生成规则
+--------
+* 单字：全码（声母+韵母，2 键）+ 1 键声母码；
+* 词组（键道原版编码）：
+  * 2 字：音音全码（如 我们 = ``wu mk``）；
+  * 3 字：三个首字母（如 为什么 = ``w u m``）；
+  * 4 字：四个首字母（如 万里长城 = ``w l y y``）；
+  * 5 字以上：前三首 + 末一首（如 吃一堑长一智 = ``y f q ;``）。
+
+码表里的 code 用**空格分隔音节**（每个字的全码/声母码是一个音节），
+这样 prism 的音节表只有几百项，整词由音节序列组成；
+不要写成无空格的长串，否则每个词都是独立音节，大数据量时 prism 会爆炸。
+
+不再读取键道 CiDB：形码只做运行时筛选，词库使用标准拼音词库即可。
+
+Use ``--help`` for options.
+"""
+
+import argparse
+import os
+import re
+import sys
+
+# ---------------------------------------------------------------------------
+# 键道27C 音码映射 (copied from rime_jd27c/Lambda/Layout.py)
+# ---------------------------------------------------------------------------
+
+PY_TRANSFORM = {
+    'qve': 'que',
+    'lve': 'lue',
+    'nve': 'nue',
+    'jve': 'jue',
+    'xve': 'xue',
+    'yve': 'yue',
+    'm': 'en',
+    'ng': 'eng',
+}
+
+PY_SHENG = {
+    'a': '~', 'ai': '~', 'an': '~', 'ang': '~', 'ao': '~',
+    'e': '~', 'ei': '~', 'en': '~', 'eng': '~', 'er': '~',
+    'o': '~', 'ou': '~',
+}
+
+PY_YUN = {
+    'ya': 'ia', 'yan': 'ian', 'yang': 'iang', 'yao': 'iao',
+    'ye': 'ie', 'yong': 'iong', 'you': 'iu',
+    'ju': 'v', 'qu': 'v', 'xu': 'v', 'yu': 'v',
+    'a': 'a', 'ai': 'ai', 'an': 'an', 'ang': 'ang', 'ao': 'ao',
+    'e': 'e', 'ei': 'ei', 'en': 'en', 'eng': 'eng', 'er': 'er',
+    'o': 'o', 'ou': 'ou',
+}
+
+JD_S2K = {
+    'q': 'q', 'w': 'w', 'r': 'r', 't': 't', 'y': 'f', 'p': 'p',
+    's': 's', 'd': 'd', 'f': 'f', 'g': 'g', 'h': 'h', 'j': 'j',
+    'k': 'k', 'l': 'l', 'z': 'z', 'x': 'x', 'c': 'c', 'b': 'b',
+    'n': 'n', 'm': 'm', 'zh': ';', 'ch': 'y', 'sh': 'u', '~': 'x',
+}
+
+JD_Y2K = {
+    'ua': 'q', 'iu': 'q', 'ei': 'w', 'un': 'w', 'e': 'f', 'eng': 'p',
+    'uan': 'g', 'ong': 'j', 'iong': 'j', 'ang': 'l', 'a': 'r', 'ia': 'r',
+    'ou': 's', 'ie': 's', 'an': 't', 'uai': 'd', 'ing': 'd', 'ai': 'h',
+    'ue': 'h', 'u': 'n', 'er': 'n', 'i': 'y', 'uo': 'u', 'v': ';',
+    'o': 'u', 'ao': 'z', 'iang': 'x', 'uang': 'x', 'iao': 'c', 'in': 'b',
+    'ui': 'b', 'en': 'k', 'ian': 'm',
+}
+
+JD_B = {'乛': 'a', '丿': 'e', '丨': 'i', '丶': 'o', '㇐': 'v'}
+
+
+def transform_py(pinyin):
+    pinyin = pinyin.strip().lower()
+    return PY_TRANSFORM.get(pinyin, pinyin)
+
+
+def sheng(py):
+    if py in PY_SHENG:
+        return PY_SHENG[py]
+    if py.startswith('zh'):
+        return 'zh'
+    if py.startswith('ch'):
+        return 'ch'
+    if py.startswith('sh'):
+        return 'sh'
+    return py[0] if py else ''
+
+
+def yun(py):
+    if py in PY_YUN:
+        return PY_YUN[py]
+    if py.startswith(('zh', 'ch', 'sh')):
+        return py[2:]
+    return py[1:]
+
+
+def pinyin2sy(py):
+    """全拼 -> 键道音码（双拼两码），无法映射时返回 None。"""
+    py = transform_py(py)
+    if not py:
+        return None
+    s, y = sheng(py), yun(py)
+    if s not in JD_S2K or y not in JD_Y2K:
+        return None
+    return JD_S2K[s] + JD_Y2K[y]
+
+
+def syllable_reading(py):
+    """全拼 -> (全码, 声母码)，无法映射时返回 None。"""
+    py = transform_py(py)
+    if not py:
+        return None
+    full = pinyin2sy(py)
+    if not full:
+        return None
+    s = sheng(py)
+    if s not in JD_S2K:
+        return None
+    return (full, JD_S2K[s])
+
+
+def static_sound_code(code_str):
+    """把静态码（如 ``<sh><i>k<e><丿><丶>``）中的音码部分提取出来。"""
+    tokens = re.findall(r'<[^>]+>|[^<>]', code_str)
+    out = []
+    for token in tokens:
+        if token.startswith('<'):
+            name = token[1:-1]
+            if name in JD_S2K:
+                out.append(JD_S2K[name])
+            elif name in JD_Y2K:
+                out.append(JD_Y2K[name])
+            else:  # 笔画等形码，音码部分结束
+                break
+        else:
+            if token in JD_S2K:
+                out.append(JD_S2K[token])
+            elif token in JD_Y2K:
+                out.append(JD_Y2K[token])
+            else:
+                break
+    return ''.join(out) or None
+
+
+# ---------------------------------------------------------------------------
+# 数据读取
+# ---------------------------------------------------------------------------
+
+def parse_weight(text):
+    try:
+        w = float(text)
+    except ValueError:
+        return None
+    return w if w > 0 else 1.0
+
+
+def format_weight(weight):
+    if weight == int(weight):
+        return str(int(weight))
+    return ('%.6f' % weight).rstrip('0').rstrip('.')
+
+
+def iter_dict_rows(path):
+    """按行产出 Rime 词典条目（跳过 YAML 头与注释）。"""
+    in_header = False
+    with open(path, encoding='utf-8') as f:
+        for line in f:
+            line = line.rstrip('\n')
+            if not line or line.startswith('#'):
+                continue
+            if line == '---':
+                in_header = True
+                continue
+            if line == '...':
+                in_header = False
+                continue
+            if in_header:
+                continue
+            yield line.split('\t')
+
+
+def load_dict(path, default_weight=1.0):
+    """读取标准拼音词库。
+
+    返回 ``(char_w, words, vocab, stats)``：
+      * char_w[char] = 字频（取各读音最大）
+      * words = [(word, [pinyin...], weight)]  （带拼音）
+      * vocab = [(word, weight)]               （无拼音，靠单字表自动注音）
+    """
+    char_w = {}
+    words = []
+    vocab = []
+    stats = {'rows': 0, 'chars': 0, 'words': 0, 'vocab': 0, 'skipped': 0}
+    for row in iter_dict_rows(path):
+        if not row or not row[0]:
+            continue
+        text = row[0]
+        pinyin = None
+        weight = None
+        if len(row) >= 3:
+            if row[1]:
+                pinyin = row[1]
+            if row[2]:
+                weight = parse_weight(row[2])
+        elif len(row) == 2:
+            if row[1]:
+                w = parse_weight(row[1])
+                if w is not None:
+                    weight = w
+                else:
+                    pinyin = row[1]
+        stats['rows'] += 1
+        if len(text) == 1:
+            w = weight if weight is not None else default_weight
+            if pinyin:
+                syllables = pinyin.split()
+                if len(syllables) == 1:
+                    char_w[text] = max(char_w.get(text, 0.0), w)
+            else:
+                char_w[text] = max(char_w.get(text, 0.0), w)
+            stats['chars'] += 1
+            continue
+        if pinyin:
+            syllables = pinyin.split()
+            if len(syllables) != len(text):
+                stats['skipped'] += 1
+                continue
+            words.append(
+                (text, syllables, weight if weight is not None else default_weight))
+            stats['words'] += 1
+        else:
+            vocab.append(
+                (text, weight if weight is not None else default_weight))
+            stats['vocab'] += 1
+    return char_w, words, vocab, stats
+
+
+def load_zidb(path):
+    """读取 ZiDB/通常.txt：单字与读音（含键道短码长度）。"""
+    chars = []
+    with open(path, encoding='utf-8') as f:
+        for line in f:
+            row = line.rstrip('\n').split('\t')
+            if len(row) < 5:
+                continue
+            char = row[0]
+            pinyins = []
+            for i in range(3, len(row) - 1, 2):
+                pinyins.append((row[i], int(row[i + 1])))
+            chars.append((char, pinyins))
+    return chars
+
+
+def load_zidb_shapes(path):
+    """char -> 键道形码（ZiDB 第 3 列的 4 个笔画映射成 aeiov）。"""
+    shapes = {}
+    with open(path, encoding='utf-8') as f:
+        for line in f:
+            row = line.rstrip('\n').split('\t')
+            if len(row) < 5:
+                continue
+            code = ''.join(JD_B.get(s, '') for s in row[2])
+            if code:
+                shapes[row[0]] = code
+    return shapes
+
+
+def load_zidb_static(path):
+    entries = []
+    if not os.path.exists(path):
+        return entries
+    with open(path, encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            row = line.split('\t')
+            if len(row) != 2:
+                continue
+            code = static_sound_code(row[1])
+            if code:
+                entries.append((row[0], code))
+    return entries
+
+
+# ---------------------------------------------------------------------------
+# 音码生成
+# ---------------------------------------------------------------------------
+
+def build_char_codes(zidb, zidb_static, char_w, default_weight):
+    """char -> [(全码, 声母码, 权重)]，含 static 音码与多音字。"""
+    raw = {}
+    for char, pinyins in zidb:
+        for py, jd_w in pinyins:
+            if jd_w <= 0:  # 键道标记的无理读音
+                continue
+            r = syllable_reading(py)
+            if not r:
+                continue
+            full, init = r
+            weight = (char_w.get(char)
+                      or 10 ** (5 - min(jd_w, 5)))
+            raw.setdefault(char, []).append((full, init, weight))
+    for char, code in zidb_static:
+        raw.setdefault(char, []).append((code, code[0], default_weight))
+
+    result = {}
+    for char, options in raw.items():
+        best = {}
+        for full, init, weight in options:
+            key = (full, init)
+            if weight > best.get(key, 0.0):
+                best[key] = weight
+        result[char] = [(full, init, weight)
+                        for (full, init), weight in best.items()]
+    return result
+
+
+def word_code(reading, abbrev_weight):
+    """reading = [(全码, 声母码)...] -> (code, 权重系数) 或 None。
+
+    键道原版词组编码：
+      n == 2  音音全码（如 我们 = wu mk）
+      n == 3  3 个首字母（如 为什么 = w u m）
+      n == 4  4 个首字母（如 万里长城 = w l y y）
+      n >= 5  前 3 个首字母 + 末字首字母（如 吃一堑长一智 = y f q ;）
+
+    音节之间用空格分隔（Rime 按空格切分音节）。
+    """
+    n = len(reading)
+    if n == 2:
+        return (' '.join(f for f, _ in reading), 1.0)
+    if n in (3, 4):
+        initials = [i for _, i in reading]
+        if not all(initials):
+            return None
+        return (' '.join(initials), abbrev_weight)
+    if n >= 5:
+        head = [i for _, i in reading[:3]]
+        tail = reading[-1][1]
+        if not all(head) or not tail:
+            return None
+        return (' '.join(head + [tail]), abbrev_weight)
+    return None
+
+
+def syllables_reading(syllables):
+    reading = []
+    for py in syllables:
+        r = syllable_reading(py)
+        if not r:
+            return None
+        reading.append(r)
+    return reading
+
+
+def auto_reading(word, char_codes):
+    """无拼音词：逐字取最高频读音。"""
+    reading = []
+    for ch in word:
+        options = char_codes.get(ch)
+        if not options:
+            return None
+        full, init, _ = max(options, key=lambda o: o[2])
+        reading.append((full, init))
+    return reading
+
+
+# ---------------------------------------------------------------------------
+# 码表生成
+# ---------------------------------------------------------------------------
+
+def build_danzi(char_codes, initial_weight):
+    entries = {}
+    for char, options in char_codes.items():
+        for full, init, weight in options:
+            key = (char, full)
+            entries[key] = max(entries.get(key, 0.0), weight)
+            if init:
+                key = (char, init)
+                entries[key] = max(entries.get(key, 0.0),
+                                   weight * initial_weight)
+    return entries
+
+
+def build_cizu(word_entries, vocab_entries, char_codes,
+               abbrev_weight, default_weight):
+    entries = {}
+    skipped = {'pinyin': 0, 'vocab': 0}
+
+    def add(word, code, weight):
+        if not code:
+            return
+        key = (word, code)
+        if weight > entries.get(key, 0.0):
+            entries[key] = weight
+
+    def add_reading(word, reading, weight):
+        r = word_code(reading, abbrev_weight)
+        if r:
+            code, scale = r
+            add(word, code, weight * scale)
+
+    for word, syllables, weight in word_entries:
+        weight = weight or default_weight
+        reading = syllables_reading(syllables)
+        if not reading:
+            skipped['pinyin'] += 1
+            continue
+        add_reading(word, reading, weight)
+
+    for word, weight in vocab_entries:
+        weight = weight or default_weight
+        reading = auto_reading(word, char_codes)
+        if not reading:
+            skipped['vocab'] += 1
+            continue
+        add_reading(word, reading, weight)
+
+    return entries, skipped
+
+
+# ---------------------------------------------------------------------------
+# 写出
+# ---------------------------------------------------------------------------
+
+DANZI_HEADER = """\
+# 键道27C Flow 单字码表（音码 + 1键声母码）
+# 由 tools/build_flow_dict.py 自动生成，请勿手工修改
+---
+name: xkjd27c_flow.danzi
+version: "1.1"
+sort: by_weight
+use_preset_vocabulary: false
+...
+"""
+
+CIZU_HEADER = """\
+# 键道27C Flow 词组码表
+# 由 tools/build_flow_dict.py 自动生成，请勿手工修改
+# 2 字：音音全码；3/4 字：首字母；5 字以上：前三首 + 末一首
+---
+name: xkjd27c_flow.cizu
+version: "1.2"
+sort: by_weight
+use_preset_vocabulary: false
+...
+"""
+
+MAIN_DICT = """\
+# 键道27C Flow 码表（音码）
+# 由 tools/build_flow_dict.py 自动生成，请勿手工修改
+---
+name: xkjd27c_flow
+version: "1.1"
+sort: by_weight
+use_preset_vocabulary: false
+import_tables:
+  - xkjd27c_flow.danzi
+  - xkjd27c_flow.cizu
+...
+"""
+
+
+def write_dict(path, header, entries, scale=1.0):
+    ordered = sorted(entries.items(), key=lambda kv: (kv[0][1], -kv[1], kv[0][0]))
+    with open(path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(header)
+        for (text, code), weight in ordered:
+            f.write('%s\t%s\t%s\n' % (text, code, format_weight(weight * scale)))
+    return len(ordered)
+
+
+# ---------------------------------------------------------------------------
+# 主流程
+# ---------------------------------------------------------------------------
+
+def find_pinyin_simp(home):
+    candidates = [
+        '/usr/share/rime-data/pinyin_simp.dict.yaml',
+        os.path.join(home, '.config', 'rime', 'pinyin_simp.dict.yaml'),
+        os.path.join(home, '.local', 'share', 'fcitx5', 'rime',
+                     'pinyin_simp.dict.yaml'),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return None
+
+
+def rime_ice_files(repo):
+    cn = os.path.join(repo, 'cn_dicts')
+    return {
+        'char': os.path.join(cn, '8105.dict.yaml'),
+        'words': [
+            os.path.join(cn, 'base.dict.yaml'),
+            os.path.join(cn, 'ext.dict.yaml'),
+            os.path.join(cn, 'others.dict.yaml'),
+        ],
+        'tencent': os.path.join(cn, 'tencent.dict.yaml'),
+    }
+
+
+def main():
+    here = os.path.dirname(os.path.abspath(__file__))
+    default_repo = os.path.normpath(os.path.join(here, '..', '..', 'rime_jd27c'))
+    home = os.path.expanduser('~')
+
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--source', default=default_repo,
+                        help='rime_jd27c 仓库路径（默认 %(default)s）')
+    parser.add_argument('--pinyin-simp', default=None,
+                        help='pinyin_simp.dict.yaml 路径')
+    parser.add_argument('--no-pinyin-simp-words', action='store_true',
+                        help='只把 pinyin_simp 当字频源，不生成词组')
+    parser.add_argument('--words', action='append', default=[],
+                        metavar='PATH',
+                        help='额外标准拼音词库（词/拼音/权重），可重复')
+    parser.add_argument('--rime-ice', default=None, metavar='DIR',
+                        help='rime-ice 仓库路径，引入 8105 + base/ext/others')
+    parser.add_argument('--rime-ice-tencent', action='store_true',
+                        help='同时引入 rime-ice tencent（无拼音，自动注音）')
+    parser.add_argument('--out', default=os.path.normpath(
+                            os.path.join(here, '..', 'rime')),
+                        help='输出目录（默认 %(default)s）')
+    parser.add_argument('--weight-scale', type=float, default=1.0,
+                        help='全局词频缩放（默认 %(default)s）')
+    parser.add_argument('--abbrev-weight', type=float, default=1.0,
+                        help='简码（3 字以上首字母）词频系数（默认 %(default)s）')
+    parser.add_argument('--initial-weight', type=float, default=1.0,
+                        help='1 键声母码词频系数（默认 %(default)s）')
+    parser.add_argument('--default-weight', type=float, default=1.0,
+                        help='无权重条目的默认词频（默认 %(default)s）')
+    args = parser.parse_args()
+
+    pinyin_simp = args.pinyin_simp or find_pinyin_simp(home)
+    if not pinyin_simp or not os.path.exists(pinyin_simp):
+        sys.exit('找不到 pinyin_simp.dict.yaml，请用 --pinyin-simp 指定')
+
+    # ---------------- 数据源 ----------------
+    char_w = {}
+    word_entries = []
+    vocab_entries = []
+    total_stats = {'rows': 0, 'words': 0, 'vocab': 0, 'skipped': 0}
+    sources = []
+
+    def absorb(path, use_words=True):
+        cw, words, vocab, stats = load_dict(path, args.default_weight)
+        for ch, w in cw.items():
+            char_w[ch] = max(char_w.get(ch, 0.0), w)
+        total_stats['rows'] += stats['rows']
+        if use_words:
+            word_entries.extend(words)
+            vocab_entries.extend(vocab)
+            total_stats['words'] += stats['words']
+            total_stats['vocab'] += stats['vocab']
+            total_stats['skipped'] += stats['skipped']
+        sources.append((path, stats))
+
+    absorb(pinyin_simp, use_words=not args.no_pinyin_simp_words)
+    for path in args.words:
+        if not os.path.exists(path):
+            sys.exit('找不到词库：%s' % path)
+        absorb(path)
+
+    if args.rime_ice:
+        ice = rime_ice_files(args.rime_ice)
+        if os.path.exists(ice['char']):
+            absorb(ice['char'], use_words=False)
+        for path in ice['words']:
+            if os.path.exists(path):
+                absorb(path)
+        if args.rime_ice_tencent and os.path.exists(ice['tencent']):
+            absorb(ice['tencent'])
+
+    print('数据源：')
+    for path, stats in sources:
+        print('  %s  (%d 行, 词 %d, 无拼音 %d, 跳过 %d)'
+              % (path, stats['rows'], stats['words'],
+                 stats['vocab'], stats['skipped']))
+    print('  字频 %d 字' % len(char_w))
+    print('  词条 %d（无拼音 %d）' % (len(word_entries), len(vocab_entries)))
+
+    zidb_path = os.path.join(args.source, 'Lambda', 'ZiDB', '通常.txt')
+    zidb = load_zidb(zidb_path)
+    shapes = load_zidb_shapes(zidb_path)
+    zidb_static = load_zidb_static(
+        os.path.join(args.source, 'Lambda', 'ZiDB', '静态.txt'))
+
+    char_codes = build_char_codes(zidb, zidb_static, char_w,
+                                  args.default_weight)
+    danzi = build_danzi(char_codes, args.initial_weight)
+    cizu, skipped = build_cizu(word_entries, vocab_entries, char_codes,
+                               args.abbrev_weight, args.default_weight)
+
+    os.makedirs(args.out, exist_ok=True)
+    scale = args.weight_scale
+    print('词频缩放系数 %.6g；节奏码 ×%.6g；1 键码 ×%.6g'
+          % (scale, args.abbrev_weight, args.initial_weight))
+    print('无法注音：拼音词 %d，自动注音 %d'
+          % (skipped['pinyin'], skipped['vocab']))
+
+    n1 = write_dict(os.path.join(args.out, 'xkjd27c_flow.danzi.dict.yaml'),
+                    DANZI_HEADER, danzi, scale)
+    n2 = write_dict(os.path.join(args.out, 'xkjd27c_flow.cizu.dict.yaml'),
+                    CIZU_HEADER, cizu, scale)
+    shape_path = os.path.join(args.out, 'xkjd27c_flow.shape.txt')
+    with open(shape_path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write('# 键道27C Flow 形码表（ZiDB 前 4 笔画 -> aeiov）\n')
+        for char, code in sorted(shapes.items()):
+            f.write('%s\t%s\n' % (char, code))
+    with open(os.path.join(args.out, 'xkjd27c_flow.dict.yaml'), 'w',
+              encoding='utf-8', newline='\n') as f:
+        f.write(MAIN_DICT)
+
+    print('单字 %d 条，词组 %d 条，形码 %d 字' % (n1, n2, len(shapes)))
+
+
+if __name__ == '__main__':
+    main()
