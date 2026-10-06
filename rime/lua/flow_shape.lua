@@ -24,7 +24,7 @@
 --
 -- 行为：
 --   * 形码键      -> 输入串只有 aeiov 时进入输入串，由纯形码表（xkjd27c_flow.shape）
---                    匹配（纯笔码）；否则追加到 flow_shape（最长 12 键），刷新候选
+--                    匹配（纯笔码）；否则追加到 flow_shape（最长 40 键），刷新候选
 --   * 回车        -> 原样上屏输入（输入 + 形码）
 --   * BackSpace   -> flow_shape 非空则删掉最后一个形码
 --   * `-` / `=`   -> 手动调序（见上）；造词模式下 `-` 入库退出、`=` 删除
@@ -40,7 +40,7 @@ local secondary = require("flow_secondary")
 
 local SHAPE_KEYS = { a = true, e = true, i = true, o = true, v = true }
 local PROP = "flow_shape"
-local MAX_SHAPE = 12
+local MAX_SHAPE = 40
 local XK_BACKSPACE = 0xff08
 local XK_TAB = 0xff09
 local XK_RETURN = 0xff0d
