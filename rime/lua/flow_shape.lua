@@ -100,6 +100,24 @@ local function place(text, input, shape, syl)
     put(text, shape, syl)
 end
 
+-- 把一段的文本换成 text。Rime 没有「删字」的 API，用单候选菜单替换；
+-- 已确认的段之后不会被重翻译，替换能保持住。
+local function set_segment_text(ctx, seg, text)
+    local repl = Candidate("flow_order", seg.start, seg._end, text, "")
+    repl.preedit = text
+    -- Translation 的生成函数要用插件的全局 yield() 产出候选（不能 return）
+    local trans = Translation(function()
+        yield(repl)
+    end)
+    local menu = Menu()
+    menu:add_translation(trans)
+    menu:prepare(1)
+    seg.menu = menu
+    seg.selected_index = 0
+    seg.status = "kSelected"
+    ctx.input = ctx.input   -- 触发重画
+end
+
 -- `-` 降档（上调）：把候选从当前级别移走，pin 到更短一级；
 --   补全来的词（pin 在别的级别）先 pin 到本级，pin 在更短级别时从
 --   它自己的级别再上一级；单字全码（声韵）在最短级别继续削到 1 键简码；
@@ -265,15 +283,43 @@ local function processor(key_event, env)
         return 2
     end
 
-    -- BackSpace：优先删形码
+    -- BackSpace：优先删形码；造词模式下已确认的文本按字删（像上屏后
+    -- 在应用里按退格），删空的那一段再整段删（连同它的输入）
     if code == XK_BACKSPACE then
         local s = get_shape(ctx)
         if s ~= "" then
             set_shape(ctx, s:sub(1, -2))
             return 1
         end
-        if is_create and #ctx.input <= 1 then
-            create.exit(ctx)
+        if is_create then
+            if #ctx.input <= 1 then
+                create.exit(ctx)
+                return 2
+            end
+            local comp = ctx.composition
+            local seg = comp:back()
+            if seg and (seg._end - seg.start) == 0 then
+                comp:pop_back()   -- 尾部空段
+                seg = comp:back()
+            end
+            if seg and (seg.status == "kSelected" or
+                    seg.status == "kConfirmed") then
+                local cand = seg:get_selected_candidate()
+                local text = (cand and cand.text) or ""
+                local n = utf8.len(text)
+                if n and n > 1 then
+                    -- 去掉最后一个字，保留这段的输入和位置
+                    set_segment_text(ctx, seg,
+                                     text:sub(1, utf8.offset(text, n) - 1))
+                    return 1
+                end
+                -- 只剩一个字（或没候选）：整段连输入一起删
+                ctx.input = ctx.input:sub(1, seg.start)
+                return 1
+            end
+            -- 还没确认的输入：逐键删
+            ctx.input = ctx.input:sub(1, -2)
+            return 1
         end
         return 2
     end

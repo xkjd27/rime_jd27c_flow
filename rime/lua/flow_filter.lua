@@ -197,34 +197,55 @@ local function filter(translation, env)
     local input_len = #input
     local shape = ctx:get_property("flow_shape") or ""
     local creating = ctx:get_property("flow_create") == "1"
-    local key = input .. "|" .. shape
 
-    -- 造词模式按当前段（分词后可能不是从 0 开始）收集候选；
-    -- 普通模式要求候选覆盖整段输入
-    local span_start, span_end = 0, input_len
-    if creating then
-        local seg = ctx.composition and ctx.composition:back()
-        if seg then
-            span_start, span_end = seg.start, seg._end
-        end
-    end
-
-    -- 词库（翻译）给出的词：用来区分「词库词」和「只存在 pin 里的自造词」
+    -- 收集这段 translation 的候选。
+    -- 造词模式下 filter 也会被叫到开头 ` 的 punct 段上，这时候
+    -- composition:back() 是后面的音码段；span 要以这段候选自己的为准，
+    -- 否则会把 pin 候选挂到 ` 段上（preedit/preview 里重复显示）。
+    -- 普通模式照旧要求候选覆盖整段输入。
     local dict_words = {}
     local base = {}
-    for cand in translation:iter() do
-        if (cand._start or 0) == span_start and (cand._end or 0) == span_end then
-            dict_words[cand.text] = true
-            if shapes.match(cand.text, shape) then
-                base[#base + 1] = cand
+    local span_start, span_end
+    if creating then
+        for cand in translation:iter() do
+            local s, e = cand._start or 0, cand._end or 0
+            if not span_start then
+                span_start, span_end = s, e
+            end
+            if s == span_start and e == span_end then
+                dict_words[cand.text] = true
+                if shapes.match(cand.text, shape) then
+                    base[#base + 1] = cand
+                end
+            end
+        end
+        if not span_start then
+            -- 这段还没有候选（音码打一半）：退回当前段
+            span_start, span_end = 0, input_len
+            local seg = ctx.composition and ctx.composition:back()
+            if seg then
+                span_start, span_end = seg.start, seg._end
+            end
+        end
+    else
+        span_start, span_end = 0, input_len
+        for cand in translation:iter() do
+            if (cand._start or 0) == span_start and
+                    (cand._end or 0) == span_end then
+                dict_words[cand.text] = true
+                if shapes.match(cand.text, shape) then
+                    base[#base + 1] = cand
+                end
             end
         end
     end
-    -- 当前段的音码（造词模式下去掉开头的 `），给补出来的候选当 preedit
+    -- 当前段的音码（造词模式下去掉开头的 `）。pin / 自动前进 / 补全都用它
+    -- 当 key：造词模式下已确认的段不该参与当前段的候选和排除
     local code_text = input:sub(span_start + 1, span_end)
     if creating then
         code_text = create.strip_marker(code_text)
     end
+    local key = code_text .. "|" .. shape
     -- 自造词补全：自造词只存在 pin 里，输入同音码下更短/其它形码级别时
     -- 也要能像词库词一样看到它——同音码下 pin 在其它级别的词按 pin 长短
     -- 补进候选（pin 越短越靠前）。不这样做的话，simp 这种词库没兜底的词
@@ -235,8 +256,7 @@ local function filter(translation, env)
     -- 默认权重高：补出来的自造词放在自然候选前面（命中 pin 的再由
     -- apply_manual_order 提到最前），其余和自然候选一起按提示键数排序。
     local injected = {}
-    if not creating and code_text ~= "" and
-            not is_shape_only_input(code_text) then
+    if code_text ~= "" and not is_shape_only_input(code_text) then
         local seen = {}
         for _, cand in ipairs(base) do
             seen[cand.text] = true
@@ -345,7 +365,7 @@ local function filter(translation, env)
         return
     end
 
-    local excluded = collect_exclusions(input, shape)
+    local excluded = collect_exclusions(code_text, shape)
 
     -- 该 key 有手动顺序：不再做自动前进
     local wanted = order.get(key)
@@ -370,17 +390,11 @@ local function filter(translation, env)
     top_cache[key] = current_top
 
     -- 提示按键：造词模式用当前段的音码（去掉开头的 `），否则用整段输入
-    local hint_input = input:sub(span_start + 1, span_end)
-    if creating then
-        hint_input = create.strip_marker(hint_input)
-    end
+    local hint_input = code_text
     local hint_ctx = {}
     -- 不可顶功提示（原版 ⛔️）：纯音码、不足 4 键、还没形码时，
     -- 再加音码也不会顶功上屏（只会继续延长输入）
-    local code = input:sub(span_start + 1, span_end)
-    if creating then
-        code = create.strip_marker(code)
-    end
+    local code = code_text
     local no_topup = shape == "" and #code >= 1 and #code < 4 and
         code:match("^[bcdfghjklmnpqrstuwxyz;]+$") ~= nil
     -- 按「还差几键」（提示键数）稳定排序：首选 0 键、次简 1 键（Tab），
