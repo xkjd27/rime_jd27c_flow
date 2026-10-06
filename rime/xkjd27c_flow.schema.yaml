@@ -1,12 +1,8 @@
 # Rime schema
 # encoding: utf-8
 #
-# 键道27C Flow —— 星空键道27C 音码方案
-#
-# 只保留键道27C 的音码（声母 + 韵母，一字两码），
-# 词组用键道原版简码，逐词上屏（四码 / 形码顶功）。
-# 码表由 tools/build_flow_dict.py 生成。
-# 引擎用 table_translator 按码表逐词匹配（enable_sentence: false），无整句合成。
+# 键道27C・流
+# 支持用户调频造词的 键道27C 输入法
 
 schema:
   schema_id: xkjd27c_flow

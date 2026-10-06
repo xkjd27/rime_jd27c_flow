@@ -162,10 +162,11 @@ local function shape_hint(cand, input, shape, base, excluded, current_top, ctx)
     return nil
 end
 
--- 给候选写上提示：优先补声码（先音后形），声码已完则给形码
+-- 给候选写上提示：优先补声码（先音后形），声码已完则给形码；
+-- 返回提示键串（= 还差几键），供候选排序用
 local function apply_hint(cand, input, shape, base, excluded, current_top, ctx)
     if not hint_on or cand.text == current_top then
-        return
+        return nil
     end
     local hint = codes.next_keys(cand.text, input)
     if not hint then
@@ -173,7 +174,9 @@ local function apply_hint(cand, input, shape, base, excluded, current_top, ctx)
     end
     if hint and hint ~= "" then
         cand.comment = hint
+        return hint
     end
+    return nil
 end
 
 local function filter(translation, env)
@@ -318,17 +321,25 @@ local function filter(translation, env)
     end
     local no_topup = shape == "" and #code >= 1 and #code < 4 and
         code:match("^[bcdfghjklmnpqrstuwxyz;]+$") ~= nil
+    -- 按「还差几键」（提示键数）稳定排序：首选 0 键、次简 1 键（Tab），
+    -- 其余按提示长度；同样键数的保持原来的权重 / pin 顺序；没有提示的
+    -- （最近造词、推不上去的）放最后
+    local ordered = {}
     for i, cand in ipairs(final) do
+        local cost
         if recent and recent[cand.text] then
             -- 最近造词：不参与提示计算，注释标「最近」
             cand.comment = "最近"
+            cost = math.huge
         elseif secondary_text and cand.text == secondary_text and i > 1 then
             -- 次简：注释标 🔹（和原版一样），形码照常显示在 preedit 上；
             -- 次简本身就是首选时不标（Tab 仍然上屏它）
             annotate(cand, shape)
             cand.comment = "🔹"
+            cost = 1
         else
-            apply_hint(cand, hint_input, shape, base, excluded, current_top, hint_ctx)
+            local hint = apply_hint(cand, hint_input, shape, base, excluded,
+                                    current_top, hint_ctx)
             annotate(cand, shape)
             if creating and hint_input == "" then
                 -- 只有 `：在标点的〔半角〕/〔全角〕提示后补「造词模式」
@@ -337,8 +348,24 @@ local function filter(translation, env)
             if i == 1 and no_topup then
                 cand.comment = "⛔️" .. (cand.comment or "")
             end
+            if i == 1 then
+                cost = 0
+            elseif hint then
+                cost = #hint
+            else
+                cost = math.huge
+            end
         end
-        yield(cand)
+        ordered[#ordered + 1] = { cand = cand, cost = cost, i = i }
+    end
+    table.sort(ordered, function(a, b)
+        if a.cost ~= b.cost then
+            return a.cost < b.cost
+        end
+        return a.i < b.i
+    end)
+    for _, entry in ipairs(ordered) do
+        yield(entry.cand)
     end
 end
 
