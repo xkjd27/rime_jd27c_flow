@@ -272,6 +272,7 @@ python3 tools/build_flow_dict.py
 --rime-ice-tencent     再引入 rime-ice tencent（无拼音，自动注音）
 --no-align-original    不按原版 1 键/2 键首选调整单字权重
 --abbrev-weight FLOAT  节奏码词频系数（默认 1.0）
+--length-weight FLOAT  词组按字数降权：每多 1 字乘一次（默认 0.7，1 = 不降权）
 --initial-weight FLOAT 1 键声母码词频系数（默认 1.0）
 --weight-scale FLOAT   全局词频缩放（默认 1）
 --out PATH             输出目录（默认 rime/）
@@ -288,6 +289,10 @@ python3 tools/build_flow_dict.py
   * 3 字：3 个首字母（为什么 → `w u m`）；
   * 4 字：4 个首字母（万里长城 → `w l y y`）；
   * 5 字以上：前 3 首 + 末 1 首（吃一堑长一智 → `y f q ;`）。
+* 词组词频按字数降权（`--length-weight`，默认 0.7）：每多 1 字乘一次。
+  因为 4 字词简码和 2 字词全码都是 4 键、5 字以上和 4 字词也都是 4 键，
+  不区分的话长词会抢短词的候选位（团队合作 vs 挺好 都在 `tdhz`）。
+  2 字词为基准（×1），3 字 ×0.7、4 字 ×0.49…；同字数之间的相对排序不变。
 * 码表 code 用**空格分隔音节**，prism 音节表很小（几百项），
   整词由音节序列组成；不要写成长串，否则大数据量时 prism 会爆炸。
 * 两份词库（`.ice` / `.simp`）都 import 共用单字表 `xkjd27c_flow.danzi`；

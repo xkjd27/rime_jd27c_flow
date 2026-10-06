@@ -391,7 +391,7 @@ def build_char_codes(zidb, zidb_static, char_w, char_reading_w, default_weight):
     return result
 
 
-def word_code(reading, abbrev_weight):
+def word_code(reading, abbrev_weight, length_weight=1.0):
     """reading = [(全码, 声母码)...] -> (code, 权重系数) 或 None。
 
     键道原版词组编码：
@@ -401,21 +401,23 @@ def word_code(reading, abbrev_weight):
       n >= 5  前 3 个首字母 + 末字首字母（如 吃一堑长一智 = y f q ;）
 
     音节之间用空格分隔（Rime 按空格切分音节）。
+    length_weight：词组按字数降权，每多 1 字乘一次（n=2 为基准）。
     """
     n = len(reading)
     if n == 2:
         return (' '.join(f for f, _ in reading), 1.0)
+    scale = abbrev_weight * length_weight ** (n - 2)
     if n in (3, 4):
         initials = [i for _, i in reading]
         if not all(initials):
             return None
-        return (' '.join(initials), abbrev_weight)
+        return (' '.join(initials), scale)
     if n >= 5:
         head = [i for _, i in reading[:3]]
         tail = reading[-1][1]
         if not all(head) or not tail:
             return None
-        return (' '.join(head + [tail]), abbrev_weight)
+        return (' '.join(head + [tail]), scale)
     return None
 
 
@@ -485,7 +487,7 @@ def align_original_first(danzi, first):
 
 
 def build_cizu(word_entries, vocab_entries, char_codes,
-               abbrev_weight, default_weight):
+               abbrev_weight, default_weight, length_weight=1.0):
     entries = {}
     skipped = {'pinyin': 0, 'vocab': 0}
 
@@ -497,7 +499,7 @@ def build_cizu(word_entries, vocab_entries, char_codes,
             entries[key] = weight
 
     def add_reading(word, reading, weight):
-        r = word_code(reading, abbrev_weight)
+        r = word_code(reading, abbrev_weight, length_weight)
         if r:
             code, scale = r
             add(word, code, weight * scale)
@@ -632,6 +634,8 @@ def main():
                         help='全局词频缩放（默认 %(default)s）')
     parser.add_argument('--abbrev-weight', type=float, default=1.0,
                         help='简码（3 字以上首字母）词频系数（默认 %(default)s）')
+    parser.add_argument('--length-weight', type=float, default=0.7,
+                        help='词组按字数降权底数：每多 1 字乘一次（默认 %(default)s，1 = 不降权）')
     parser.add_argument('--initial-weight', type=float, default=1.0,
                         help='1 键声母码词频系数（默认 %(default)s）')
     parser.add_argument('--default-weight', type=float, default=1.0,
@@ -721,8 +725,8 @@ def main():
 
     os.makedirs(args.out, exist_ok=True)
     scale = args.weight_scale
-    print('词频缩放系数 %.6g；节奏码 ×%.6g；1 键码 ×%.6g'
-          % (scale, args.abbrev_weight, args.initial_weight))
+    print('词频缩放系数 %.6g；节奏码 ×%.6g；按字数降权 ×%.6g/字；1 键码 ×%.6g'
+          % (scale, args.abbrev_weight, args.length_weight, args.initial_weight))
 
     n1 = write_dict(os.path.join(args.out, 'xkjd27c_flow.danzi.dict.yaml'),
                     DANZI_HEADER, danzi, scale)
@@ -750,7 +754,8 @@ def main():
         variants.append(('ice', 'rime-ice', ice_words, ice_vocab))
     for variant, note, words, vocab in variants:
         cizu, skipped = build_cizu(words, vocab, char_codes,
-                                   args.abbrev_weight, args.default_weight)
+                                   args.abbrev_weight, args.default_weight,
+                                   args.length_weight)
         path = os.path.join(args.out, 'xkjd27c_flow.%s.dict.yaml' % variant)
         n = write_dict(path, variant_header(variant, note), cizu, scale)
         print('词库 %s：%d 条（无法注音：拼音词 %d，自动注音 %d）'
