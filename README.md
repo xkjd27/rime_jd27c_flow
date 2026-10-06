@@ -2,9 +2,11 @@
 
 基于[键道27C](https://github.com/xkjd27/rime_jd27c)的布局与设计，抛弃了固定码表。进而采用了词库和逻辑顺序。
 
-
 ## 布局
 ![Layout](./docs/layout.png)
+
+### 其他布局
+* Qwerty 版本 - [键道27・流](https://github.com/xkjd27/rime_jd27_flow)
 
 ## 与键道27C的区别
 
