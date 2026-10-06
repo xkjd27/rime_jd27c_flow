@@ -209,13 +209,15 @@ local function filter(translation, env)
     -- 先应用 pin：列表里有、翻译没给的词会被补成候选（造词存的组合词）
     local chosen = apply_manual_order(base, key, span_start, span_end)
     -- 造词模式还没打码（只有 `）：候选里补上最近的造词，供 = 删除。
+    -- 文本带造词标记（`` `简直了 ``），选中后状态和普通造词选段一致；
     -- 注释标「最近」，不参与提示计算（见下面 yield 前的分支）
     local recent
     if creating and create.strip_marker(input) == "" then
         local list = order.recent(8)
         if #list > 0 then
             recent = {}
-            for _, text in ipairs(list) do
+            for _, word in ipairs(list) do
+                local text = create.mark() .. word
                 recent[text] = true
                 local dup = false
                 for _, cand in ipairs(chosen) do

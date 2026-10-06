@@ -28,6 +28,7 @@ local shapes = require("flow_shapes")
 local M = {}
 
 local PROP = "flow_create"
+local MARK = "\96"   -- 反引号（不用字面量，避免转义）
 
 -- 造词模式的开始标记：只认半角 backtick。它从空输入进入造词，并原样放进
 -- 输入串（用户看得到当前状态，`-` 入库时去掉）。
@@ -41,6 +42,11 @@ local restore_pending = false
 
 function M.is_trigger(code)
     return TRIGGERS[code]
+end
+
+-- 造词标记（开始/状态里看到的字符，filter 注入候选时用它保持状态可见）
+function M.mark()
+    return MARK
 end
 
 -- 去掉开头的造词标记（` / ~ / ｀ / ～），去掉一个
@@ -112,6 +118,10 @@ function M.store(ctx)
     end
     local sound = M.strip_marker(ctx.input)
     local phrase = M.strip_marker(ctx:get_commit_text())
+    -- 只按 ` 后从最近造词里选中的词：输入串里没有音码，从词反查方案简码
+    if sound == "" and phrase ~= "" then
+        sound = codes.scheme_code(phrase) or ""
+    end
     local ok = phrase ~= "" and sound ~= ""
     local shape = ""
     if ok then
@@ -151,7 +161,22 @@ function M.delete(ctx)
     end
     order.remove_word(word)
     ctx:clear()
-    ctx:push_input("`")
+    ctx:push_input(MARK)
+end
+
+-- 当前选中的候选是不是「最近造词」（造词模式只按 ` 时注入的候选）
+function M.recent_selected(ctx)
+    local cand = ctx:get_selected_candidate()
+    if not cand or not cand.text or cand.text == "" then
+        return false
+    end
+    local word = M.strip_marker(cand.text)
+    for _, text in ipairs(order.recent()) do
+        if text == word then
+            return true
+        end
+    end
+    return false
 end
 
 return M

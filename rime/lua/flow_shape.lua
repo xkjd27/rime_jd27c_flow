@@ -242,6 +242,12 @@ local function processor(key_event, env)
     if is_create then
         if code == 0x20 then
             local code_part = create.strip_marker(ctx.input)
+            -- 最近造词选中后空格：确认进 context（不上屏、不退出造词），
+            -- 状态变成 `` `简直了 ``，之后可以 = 删除或 - 重新按全码入库
+            if code_part == "" and ctx:has_menu() and
+                    create.recent_selected(ctx) then
+                return 2
+            end
             if code_part == "" or not ctx:has_menu() then
                 create.exit(ctx)
                 return 2  -- Editor::Confirm → ConfirmCurrentSelection || Commit
