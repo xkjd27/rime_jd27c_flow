@@ -263,34 +263,30 @@ local function filter(translation, env)
 
     top_cache[key] = current_top
 
-    -- 造词模式：不计算提示；首选上显示整条 composition 的全码
-    if creating and final[1] then
-        local code_input = create.strip_marker(input)
-        local ct = create.strip_marker(ctx:get_commit_text())
-        local seg_raw = input:sub(span_start + 1, span_end)
-        local phrase = ct
-        if seg_raw ~= "" and ct:sub(-#seg_raw) == seg_raw then
-            phrase = ct:sub(1, #ct - #seg_raw) .. final[1].text
-        end
-        local full = codes.full_code(phrase, code_input)
-        final[1].comment = full and ("全码 " .. full) or "全码 ?"
-        for _, cand in ipairs(final) do
-            annotate(cand, shape)
-            yield(cand)
-        end
-        return
+    -- 提示按键：造词模式用当前段的音码（去掉开头的 `），否则用整段输入
+    local hint_input = input:sub(span_start + 1, span_end)
+    if creating then
+        hint_input = create.strip_marker(hint_input)
     end
-
-    local ctx = {}
+    local hint_ctx = {}
     for _, cand in ipairs(final) do
-        apply_hint(cand, input, shape, base, excluded, current_top, ctx)
+        apply_hint(cand, hint_input, shape, base, excluded, current_top, hint_ctx)
         annotate(cand, shape)
+        if creating and hint_input == "" then
+            -- 只有 `：在标点的〔半角〕/〔全角〕提示后补「造词模式」
+            cand.comment = (cand.comment or "") .. "造词模式"
+        end
         yield(cand)
     end
 end
 
 local function tags_match(segment, env)
-    return segment:has_tag("abc")
+    if segment:has_tag("abc") then
+        return true
+    end
+    -- 造词模式开头那个 ` 是 punct 段，也要过 filter（给它补「造词模式」提示）
+    local ctx = env and env.engine and env.engine.context
+    return ctx ~= nil and ctx:get_property("flow_create") == "1"
 end
 
 local function init(env)
