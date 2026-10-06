@@ -13,6 +13,9 @@ local codes = require("flow_codes")
 
 local ready = false
 local hint_on = true
+-- 只给前面的候选算提示：翻到第 3 页以后还看提示的情况很少，
+-- 而提示（尤其形码提示）要模拟筛选，很费；上限之外照常出候选。
+local HINT_LIMIT = 20
 -- 自动前进状态：key = 音码串 .. "|" .. 形码前缀 -> 当时的首选
 local top_cache = {}
 
@@ -201,8 +204,12 @@ local function filter(translation, env)
     end
 
     top_cache[key] = current_top
+    local n = 0
     for _, cand in ipairs(final) do
-        apply_hint(cand, input, shape, base, excluded, current_top)
+        n = n + 1
+        if n <= HINT_LIMIT then
+            apply_hint(cand, input, shape, base, excluded, current_top)
+        end
         annotate(cand, shape)
         yield(cand)
     end
