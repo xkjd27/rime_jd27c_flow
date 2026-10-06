@@ -137,11 +137,14 @@ local function promote(ctx)
         order.insert(input .. "|", cand.text, 1)
     elseif shape ~= "" then
         local target
-        if level == shape then
+        if level == nil or level == shape then
+            -- 普通候选（没 pin）或 pin 就在本级：本级再短一档
             target = shape:sub(1, -2)
-        elseif level and #level < #shape then
+        elseif #level < #shape then
+            -- 补全来的词（pin 在更短的级别）：从它自己的级别再上一级
             target = level:sub(1, -2)
         else
+            -- 补全来的词（pin 在更长的级别）：先 pin 到本级
             target = shape
         end
         order.remove_pin(cand.text)
