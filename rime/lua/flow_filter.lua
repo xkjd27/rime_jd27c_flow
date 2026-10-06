@@ -13,9 +13,6 @@ local codes = require("flow_codes")
 
 local ready = false
 local hint_on = true
--- 只给前 N 个候选算提示：翻到后面几页还看提示的情况很少，
--- 而提示（尤其形码提示）要模拟筛选，很费；N<=0 表示不限。
-local hint_limit = 20
 -- 自动前进状态：key = 音码串 .. "|" .. 形码前缀 -> 当时的首选
 local top_cache = {}
 
@@ -82,8 +79,30 @@ local function annotate(cand, shape)
     cand.preedit = (p == "" and shape) or (p .. " " .. shape)
 end
 
+-- 把 base 的候选按期望形码前缀分桶（每个候选 O(形码长) 一次），
+-- shape_hint 里就不用每步线性扫 base 了
+local function build_buckets(base, shape)
+    local buckets = {}
+    local n = #shape
+    for _, c in ipairs(base) do
+        local exp = shapes.expected(c.text)
+        if exp and exp:sub(1, n) == shape then
+            for k = n + 1, #exp do
+                local p = exp:sub(1, k)
+                local b = buckets[p]
+                if not b then
+                    b = {}
+                    buckets[p] = b
+                end
+                b[#b + 1] = c
+            end
+        end
+    end
+    return buckets
+end
+
 -- 沿候选的期望形码串模拟自动前进，返回让它成为首选的形码键串
-local function shape_hint(cand, input, shape, base, excluded, current_top)
+local function shape_hint(cand, input, shape, base, excluded, current_top, ctx)
     local exp = shapes.expected(cand.text)
     if not exp or exp:sub(1, #shape) ~= shape then
         return nil
@@ -99,13 +118,11 @@ local function shape_hint(cand, input, shape, base, excluded, current_top)
     local keys = {}
     while #p < #exp do
         p = p .. exp:sub(#p + 1, #p + 1)
-        local list = {}
-        for _, c in ipairs(base) do
-            if shapes.match(c.text, p) then
-                list[#list + 1] = c
-            end
+        if not ctx.buckets then
+            ctx.buckets = build_buckets(base, shape)
         end
-        if #list == 0 then
+        local list = ctx.buckets[p]
+        if not list then
             return nil
         end
         local ordered = apply_manual_order(list, input .. "|" .. p)
@@ -134,13 +151,13 @@ local function shape_hint(cand, input, shape, base, excluded, current_top)
 end
 
 -- 给候选写上提示：优先补声码（先音后形），声码已完则给形码
-local function apply_hint(cand, input, shape, base, excluded, current_top)
+local function apply_hint(cand, input, shape, base, excluded, current_top, ctx)
     if not hint_on or cand.text == current_top then
         return
     end
     local hint = codes.next_keys(cand.text, input)
     if not hint then
-        hint = shape_hint(cand, input, shape, base, excluded, current_top)
+        hint = shape_hint(cand, input, shape, base, excluded, current_top, ctx)
     end
     if hint and hint ~= "" then
         cand.comment = hint
@@ -204,12 +221,9 @@ local function filter(translation, env)
     end
 
     top_cache[key] = current_top
-    local n = 0
+    local ctx = {}
     for _, cand in ipairs(final) do
-        n = n + 1
-        if hint_limit <= 0 or n <= hint_limit then
-            apply_hint(cand, input, shape, base, excluded, current_top)
-        end
+        apply_hint(cand, input, shape, base, excluded, current_top, ctx)
         annotate(cand, shape)
         yield(cand)
     end
@@ -226,10 +240,6 @@ local function init(env)
     local h = env.engine.schema.config:get_bool("flow_hint")
     if h ~= nil then
         hint_on = h
-    end
-    local lim = env.engine.schema.config:get_int("flow_hint_limit")
-    if lim ~= nil then
-        hint_limit = lim
     end
 end
 
