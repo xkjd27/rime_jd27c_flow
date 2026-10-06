@@ -6,6 +6,10 @@
 --   * 3/4 字：各字首键
 --   * 5+ 字：前三首 + 末一首
 -- 推导结果只用来给候选显示提示键，不参与候选匹配。
+--
+-- 多音字按单字表 xkjd27c_flow.danzi 的读音权重挑最重的读音补全：
+-- reverse db 的顺序不可靠（了 -> l,lc,lf），低权重读音会让提示指错
+-- （了 在 l 下曾提示 c，实际打 lf 才成首选）。
 
 local M = {}
 M.ready = false
@@ -13,6 +17,7 @@ M.reverse = nil
 
 local char_cache = {}
 local word_cache = {}
+local code_weight = {}  -- 字 -> { 音码 = 权重 }
 
 local function utf8_chars(text)
     local chars = {}
@@ -20,6 +25,31 @@ local function utf8_chars(text)
         chars[#chars + 1] = utf8.char(c)
     end
     return chars
+end
+
+-- 读单字表的「字/读音码/权重」（只用于选提示键）
+local function load_code_weight()
+    local dir = (rime_api and rime_api.get_user_data_dir and
+                 rime_api.get_user_data_dir()) or "."
+    local f = io.open(dir .. "/xkjd27c_flow.danzi.dict.yaml")
+    if not f then
+        return
+    end
+    for line in f:lines() do
+        local ch, code, w = line:match("^(.-)\t([^\t]+)\t([%d%.]+)$")
+        if ch and ch ~= "" and code then
+            local t = code_weight[ch]
+            if not t then
+                t = {}
+                code_weight[ch] = t
+            end
+            local n = tonumber(w) or 0
+            if n > (t[code] or -1) then
+                t[code] = n
+            end
+        end
+    end
+    f:close()
 end
 
 function M.init(env)
@@ -33,6 +63,7 @@ function M.init(env)
     end
     if db then
         M.reverse = db
+        load_code_weight()
         M.ready = true
         return true
     end
@@ -40,22 +71,32 @@ function M.init(env)
     return false
 end
 
--- 单字的所有音码（1 键简码 + 全码，多音字有多个）
-local function char_codes(ch)
+-- 单字的所有音码（1 键简码 + 全码，多音字有多个），按读音权重降序
+local function char_entries(ch)
     local cached = char_cache[ch]
     if cached then
         return cached
     end
     local list = {}
-    local s = M.reverse and M.reverse:lookup(ch) or ""
+    local s = (M.reverse and M.reverse:lookup(ch)) or ""
+    local weights = code_weight[ch]
     for code in s:gmatch("%S+") do
-        list[#list + 1] = code
+        list[#list + 1] = {
+            code = code,
+            w = (weights and weights[code]) or 0,
+        }
     end
+    table.sort(list, function(a, b)
+        if a.w ~= b.w then
+            return a.w > b.w
+        end
+        return a.code < b.code
+    end)
     char_cache[ch] = list
     return list
 end
 
--- 推导候选词的音码（多音字会得到多个候选码）
+-- 推导候选词的音码：返回 {code=码, w=权重} 列表（多音字会得到多个候选码）
 local function build_codes(text)
     local cached = word_cache[text]
     if cached then
@@ -65,16 +106,17 @@ local function build_codes(text)
     local n = #chars
     local result = {}
     if n == 1 then
-        for _, c in ipairs(char_codes(chars[1])) do
-            result[#result + 1] = c
+        for _, e in ipairs(char_entries(chars[1])) do
+            result[#result + 1] = e
         end
     elseif n == 2 then
-        local a, b = char_codes(chars[1]), char_codes(chars[2])
+        local a, b = char_entries(chars[1]), char_entries(chars[2])
         for _, ca in ipairs(a) do
-            if #ca >= 2 then
+            if #ca.code >= 2 then
                 for _, cb in ipairs(b) do
-                    if #cb >= 2 then
-                        result[#result + 1] = ca .. cb
+                    if #cb.code >= 2 then
+                        result[#result + 1] =
+                            { code = ca.code .. cb.code, w = ca.w + cb.w }
                     end
                 end
             end
@@ -88,43 +130,61 @@ local function build_codes(text)
                 idx[#idx + 1] = i
             end
         end
-        local function combine(i, acc)
-            if i > #idx then
-                result[#result + 1] = acc
-                return
-            end
-            local seen = {}
-            for _, c in ipairs(char_codes(chars[idx[i]])) do
-                local k = c:sub(1, 1)
-                if k ~= "" and not seen[k] then
-                    seen[k] = true
-                    combine(i + 1, acc .. k)
+        -- 各字的声母首键 -> 该键上的最大读音权重
+        local initials = {}
+        for _, i in ipairs(idx) do
+            local best = {}
+            for _, e in ipairs(char_entries(chars[i])) do
+                local k = e.code:sub(1, 1)
+                if k ~= "" and (best[k] == nil or e.w > best[k]) then
+                    best[k] = e.w
                 end
             end
+            initials[#initials + 1] = best
         end
-        combine(1, "")
+        local function combine(i, acc, w)
+            if i > #initials then
+                result[#result + 1] = { code = acc, w = w }
+                return
+            end
+            for k, kw in pairs(initials[i]) do
+                combine(i + 1, acc .. k, w + kw)
+            end
+        end
+        combine(1, "", 0)
     end
+    -- 去重（同码取最大权重），按权重降序
     local uniq = {}
-    for _, c in ipairs(result) do
-        uniq[c] = true
+    local out = {}
+    for _, e in ipairs(result) do
+        local cur = uniq[e.code]
+        if not cur then
+            uniq[e.code] = e
+            out[#out + 1] = e
+        elseif e.w > cur.w then
+            cur.w = e.w
+        end
     end
-    result = {}
-    for c in pairs(uniq) do
-        result[#result + 1] = c
-    end
-    table.sort(result)
-    word_cache[text] = result
-    return result
+    table.sort(out, function(a, b)
+        if a.w ~= b.w then
+            return a.w > b.w
+        end
+        return a.code < b.code
+    end)
+    word_cache[text] = out
+    return out
 end
 
--- input 之后还需要输入的声码（取最短扩展），没有则返回 nil
+-- input 之后还需要输入的声码（按最重读音补全），没有则返回 nil
 function M.next_keys(text, input)
-    local best = nil
-    for _, code in ipairs(build_codes(text)) do
+    local best, best_w = nil, nil
+    for _, e in ipairs(build_codes(text)) do
+        local code = e.code
         if #code > #input and code:sub(1, #input) == input then
             local rest = code:sub(#input + 1)
-            if not best or #rest < #best then
-                best = rest
+            if not best or e.w > best_w or
+                    (e.w == best_w and #rest < #best) then
+                best, best_w = rest, e.w
             end
         end
     end

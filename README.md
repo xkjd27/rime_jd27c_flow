@@ -135,7 +135,7 @@
    lua/flow_shape.lua            # 形码键处理 + 顶功
    lua/flow_shapes.lua           # 期望形码串
    lua/flow_order.lua            # 手动调序存储（leveldb/txt）
-   lua/flow_codes.lua            # 候选音码推导（reverse db，用于提示）
+   lua/flow_codes.lua            # 候选音码推导（reverse db + 单字表权重，用于提示）
    ```
 
    默认用 `.ice`（rime-ice，词多、现代）。想换成 `.simp`（pinyin_simp，小、Rime 自带）
@@ -171,6 +171,7 @@
 * **候选提示**：非首选候选右侧显示「让它成为首选还需要按的键」——
   声码没输完补声码（`h`→好 `z`、会 `b`、和 `f`），
   输完则给形码（`hjmo`→哈基米 `vo`、`hjmov`→喊救命 `iv`）；
+  多音字按单字表里权重最高的读音补全（`l`→了 `f`，不是 `c`）；
   可用 `flow_hint: false` 关闭。
 * 翻页：`[` / `]`。
 * 简繁切换：F7（默认简体）。
