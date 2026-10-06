@@ -337,7 +337,6 @@ local function init(env)
     order.init(env)
     shapes.init(env)
     codes.init(env)
-    create.init(env)
     env.flow_shape_conn = env.engine.context.commit_notifier:connect(
         function(ctx)
             ctx:set_property(PROP, "")
@@ -350,7 +349,6 @@ local function fini(env)
         env.flow_shape_conn:disconnect()
         env.flow_shape_conn = nil
     end
-    create.close()
     order.close()
 end
 

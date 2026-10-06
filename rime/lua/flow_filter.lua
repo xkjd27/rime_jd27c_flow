@@ -10,7 +10,6 @@
 local order = require("flow_order")
 local shapes = require("flow_shapes")
 local codes = require("flow_codes")
-local words = require("flow_words")
 local create = require("flow_create")
 
 local ready = false
@@ -22,8 +21,10 @@ local function full_span(cand, input_len)
     return (cand._start or 0) == 0 and (cand._end or 0) == input_len
 end
 
--- 把手动顺序里的候选提到前面，其余保持原顺序
-local function apply_manual_order(list, key)
+-- 把手动顺序里的候选提到前面；传了 span 时，列表里有、当前翻译没给的
+-- （用户 pin 过的词，含造词入库的）直接补一个候选——所以只用 order.userdb
+-- 就能既排序又加词。
+local function apply_manual_order(list, key, span_start, span_end)
     local wanted = order.get(key)
     if not wanted or #wanted == 0 then
         return list
@@ -31,12 +32,19 @@ local function apply_manual_order(list, key)
     local used = {}
     local result = {}
     for _, text in ipairs(wanted) do
+        local found
         for i, cand in ipairs(list) do
             if not used[i] and cand.text == text then
-                result[#result + 1] = cand
-                used[i] = true
+                found = i
                 break
             end
+        end
+        if found then
+            result[#result + 1] = list[found]
+            used[found] = true
+        elseif span_start then
+            result[#result + 1] =
+                Candidate("flow_order", span_start, span_end, text, "")
         end
     end
     for i, cand in ipairs(list) do
@@ -201,34 +209,7 @@ local function filter(translation, env)
         return
     end
 
-    -- 造词入库的用户词：输入（音码 + 形码）命中时提到最前
-    if not creating then
-        local extra = words.match(input .. shape)
-        if #extra > 0 then
-            local n = 0
-            for _, text in ipairs(extra) do
-                if shapes.match(text, shape) then
-                    local found
-                    for i, cand in ipairs(base) do
-                        if cand.text == text then
-                            found = i
-                            break
-                        end
-                    end
-                    local cand
-                    if found then
-                        cand = table.remove(base, found)
-                    else
-                        cand = Candidate("flow_words", 0, input_len, text, "")
-                    end
-                    table.insert(base, 1 + n, cand)
-                    n = n + 1
-                end
-            end
-        end
-    end
-
-    local chosen = apply_manual_order(base, key)
+    local chosen = apply_manual_order(base, key, span_start, span_end)
 
     -- 纯笔码输入：手动 pin 优先，其余保持原顺序，不发音码/形码提示
     if is_shape_only_input(input) then
@@ -292,7 +273,6 @@ end
 local function init(env)
     order.init(env)
     codes.init(env)
-    words.init(env)
     ready = shapes.init(env)
     local h = env.engine.schema.config:get_bool("flow_hint")
     if h ~= nil then

@@ -1,23 +1,24 @@
 -- 键道27C Flow —— 造词模式
 --
--- `（或 ~）开头进入：
+-- ` 开头进入：
+--   * 标记 ` 进输入串，preedit 里看得见；另见 flow_filter 的「造词模式」提示；
 --   * 普通输入，但禁用顶功/四码自动上屏（临时关掉 _auto_commit）；
---   * 不计算候选提示（flow_filter 负责）；
---   * 空格/数字用于分词选择（确认当前段 / 选第 N 个候选），都不上屏；
---   * `-`：把「音码 + 形码」（实际打出来的那串）作为全码 → 词组文字写入
---     flow_words 的 LevelDB，退出造词模式并还原成普通输入（保留形码）；
---     之后继续按 `-` 可以一级一级剥形码调整权重；
+--   * 候选提示照常；空格/数字用于分词选择（确认当前段 / 选第 N 个候选），
+--     都不上屏；非法内容（再按 `、没候选时的空格、标点）原样上屏退出；
+--   * `-`：把当前候选 pin 在「音码|形码」首位（造词全码，如 其实我觉得 →
+--     quwd + voeoeeoi），退出造词并还原成普通输入（保留形码）；
+--     之后继续按 `-` 一级一级剥形码调整权重；
 --   * `=` 无效；Esc，或退格到空输入退出。
 --
--- _auto_commit 的恢复：主动退出（Esc / `-` / 退到底）立即恢复；经由
--- 上屏结束时（Enter 等走 commit_notifier）延后到下一次按键，避免在
--- commit_notifier 里触发 composition 刷新。
+-- 入库即 flow_order 里的一条 pin，不再单独维护 words 库：造出来的词一定
+-- 是当前码上的现成候选，pin 住它就能到首位。
 
-local words = require("flow_words")
+local order = require("flow_order")
 
 local M = {}
 
 local PROP = "flow_create"
+
 -- 造词模式的开始标记：只认半角 backtick。它从空输入进入造词，并原样放进
 -- 输入串（用户看得到当前状态，`-` 入库时去掉）。
 local TRIGGERS = { [0x60] = "`" }
@@ -88,8 +89,8 @@ function M.tick(ctx)
     end
 end
 
--- `-`：把「音码 + 形码」当作这个词的全码入库（如 其实我觉得 →
--- quwdvoeoeeoi）；退出造词模式并还原成普通输入（保留形码），
+-- `-`：把当前候选 pin 在「音码|形码」首位（造词全码，如 其实我觉得 →
+-- quwd + voeoeeoi）；退出造词模式并还原成普通输入（保留形码），
 -- 之后可以继续按 `-` 一格一格剥形码，把词调到想要的级别/权重。
 function M.store(ctx)
     local seg = ctx.composition and ctx.composition:back()
@@ -100,16 +101,14 @@ function M.store(ctx)
     local sound = M.strip_marker(ctx.input)
     local shape = ctx:get_property("flow_shape") or ""
     local phrase = M.strip_marker(ctx:get_commit_text())
-    local code = sound .. shape
-    local key
-    if phrase ~= "" and code ~= "" then
-        key = code
-        words.add(key, phrase)
+    local ok = phrase ~= "" and sound ~= ""
+    if ok then
+        order.insert(sound .. "|" .. shape, phrase, 1)
     end
     ctx:set_property(PROP, "")
     restore(ctx)
     ctx:clear()
-    if key then
+    if ok then
         -- 回到普通模式：音码进输入、形码留在 shape；词已在候选首位，
         -- 继续按 `-` 就能一级一级升上去
         ctx:set_property("flow_shape", shape)
@@ -117,14 +116,6 @@ function M.store(ctx)
     else
         ctx:set_property("flow_shape", "")
     end
-end
-
-function M.init(env)
-    words.init(env)
-end
-
-function M.close()
-    words.close()
 end
 
 return M
