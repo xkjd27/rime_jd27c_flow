@@ -16,6 +16,7 @@
 
 local order = require("flow_order")
 local codes = require("flow_codes")
+local shapes = require("flow_shapes")
 
 local M = {}
 
@@ -96,21 +97,32 @@ end
 -- 之后可以继续按 `-` 一格一格剥形码，把词调到想要的级别/权重。
 function M.store(ctx)
     local seg = ctx.composition and ctx.composition:back()
+    local shape = ctx:get_property("flow_shape") or ""
+    local had_shape = shape ~= ""
+    -- 形码把当前段筛空了（非法/多余的笔键）：按用户规则全部删掉重算，
+    -- 拿回这一段原本的候选（`jm;yl 打完再乱按 iiii 时回到「了」）
+    if had_shape and seg and not ctx:has_menu() and (seg._end - seg.start) > 0 then
+        shape = ""
+        ctx:set_property("flow_shape", "")
+        ctx:refresh_non_confirmed_composition()
+        seg = ctx.composition and ctx.composition:back()
+    end
+    -- 当前段还是没有候选的原始输入，不当词存
     if seg and not ctx:has_menu() and (seg._end - seg.start) > 0 then
-        -- 当前段是没有候选的原始输入，不当词存
         return
     end
     local sound = M.strip_marker(ctx.input)
-    local shape = ctx:get_property("flow_shape") or ""
     local phrase = M.strip_marker(ctx:get_commit_text())
-    -- 顶功前进过的话（`jm;yl → 简直l），输入是各字全码的拼接，不是词组的
-    -- 方案码；pin 的 key 归位到方案简码（简直了 → j;l），以后打简码就能
-    -- 把它调出来
-    if phrase ~= "" and sound ~= "" and not codes.is_scheme_code(phrase, sound) then
-        sound = codes.scheme_code(phrase) or sound
-    end
     local ok = phrase ~= "" and sound ~= ""
     if ok then
+        -- 音码归位到方案简码（顶功前进拼出来的全码 → 方案码）
+        if not codes.is_scheme_code(phrase, sound) then
+            sound = codes.scheme_code(phrase) or sound
+        end
+        -- 形码删掉重填：手打的笔键只用于筛选，全码用这个词需要的完整形码
+        if had_shape then
+            shape = shapes.expected(phrase) or ""
+        end
         order.insert(sound .. "|" .. shape, phrase, 1)
     end
     ctx:set_property(PROP, "")
