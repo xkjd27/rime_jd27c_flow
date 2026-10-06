@@ -160,6 +160,7 @@ function M.delete(ctx)
         return
     end
     order.remove_word(word)
+    ctx:set_property("flow_shape", "")
     ctx:clear()
     ctx:push_input(MARK)
 end

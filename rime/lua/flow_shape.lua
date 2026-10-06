@@ -101,7 +101,8 @@ local function place(text, input, shape, syl)
 end
 
 -- `-` 降档（上调）：把候选从当前级别移走，pin 到更短一级；
---   单字全码（声韵）在最短级别继续削到 1 键简码；
+--   补全来的词（pin 在别的级别）先 pin 到本级，pin 在更短级别时从
+--   它自己的级别再上一级；单字全码（声韵）在最短级别继续削到 1 键简码；
 --   已在最短级别（1 键简码）则 pin 在当前位置。
 local function promote(ctx)
     local cand = ctx:get_selected_candidate()
@@ -110,32 +111,42 @@ local function promote(ctx)
     end
     local shape = get_shape(ctx)
     local input = ctx.input
+    local level = order.pin_level(input, cand.text)
     if is_shape_only(input) then
         -- 纯笔码：码即完整形码，没有更短的级别；把候选提到本级首位
         -- （不走 place，避免被顶掉的候选顺延到笔码输入打不出的更长 key）
-        order.remove(input .. "|", cand.text)
+        order.remove_pin(cand.text)
         order.insert(input .. "|", cand.text, 1)
     elseif shape ~= "" then
-        order.remove(input .. "|" .. shape, cand.text)
-        local target = shape:sub(1, -2)
+        local target
+        if level == shape then
+            target = shape:sub(1, -2)
+        elseif level and #level < #shape then
+            target = level:sub(1, -2)
+        else
+            target = shape
+        end
+        order.remove_pin(cand.text)
         place(cand.text, input, target)
         ctx:set_property(PROP, target)
-    elseif utf8.len(cand.text) == 1 and #input == 2 then
+    elseif utf8.len(cand.text) == 1 and #input == 2 and
+            (level == nil or level == "") then
         -- 声韵 -> 1 键简码；完整音节记进 order，供 = 还原
-        order.remove(input .. "|", cand.text)
+        order.remove_pin(cand.text)
         local short = input:sub(1, 1)
         place(cand.text, short, "", input)
         ctx.input = short
     else
+        order.remove_pin(cand.text)
         place(cand.text, input, "")
     end
     ctx:refresh_non_confirmed_composition()
 end
 
 -- `=` 升档/下调：1 键级别优先用记录的音节还原到声韵（否则反查）；
---   其它情况补下一笔形码并 pin 到更长一级；
---   同时把它从当前（更短）一级的 pin 列表里移走，避免把短码锁死。
---   已到完整形码则在当前 key 内下移一位（下调）。
+--   其它情况补下一笔形码并 pin 到更长一级，从词自己的 pin 级别延长
+--   （补全来的词 pin 在别的级别，别从当前级别延长把它提上来）；
+--   已到完整形码则在它那一级的 key 内下移一位（下调）。
 local function lower_or_extend(ctx)
     local cand = ctx:get_selected_candidate()
     if not cand or not cand.text or cand.text == "" then
@@ -144,13 +155,15 @@ local function lower_or_extend(ctx)
     local shape = get_shape(ctx)
     local input = ctx.input
     local key = input .. "|" .. shape
+    local level = order.pin_level(input, cand.text)
     if is_shape_only(input) then
         -- 纯笔码：码即完整形码，已是最长级别，在本 key 内下移一位
         order.move_down(key, cand.text)
         ctx:refresh_non_confirmed_composition()
         return
     end
-    if shape == "" and #input == 1 then
+    if shape == "" and #input == 1 and
+            (level == nil or level == "") then
         local syl = order.get_syllable(key, cand.text)
         if not syl then
             local rest = codes.next_keys(cand.text, input)
@@ -159,16 +172,23 @@ local function lower_or_extend(ctx)
             end
         end
         if syl then
-            order.remove(key, cand.text)
+            order.remove_pin(cand.text)
             order.insert(syl .. "|", cand.text, 1)
             ctx.input = syl
             ctx:refresh_non_confirmed_composition()
             return
         end
     end
-    local next = shapes.next_key(cand.text, shape)
+    local base = level or shape
+    local next = shapes.next_key(cand.text, base)
     if not next then
-        order.move_down(key, cand.text)
+        if cand.type == "flow_order" then
+            -- 补出来的自造词：到完整形码后别把它移出 pin（否则词会从
+            -- 所有级别整个消失），在本级末位待着就行
+            order.move_down_keep(input .. "|" .. base, cand.text)
+        else
+            order.move_down(input .. "|" .. base, cand.text)
+        end
         ctx:refresh_non_confirmed_composition()
         return
     end
@@ -177,13 +197,14 @@ local function lower_or_extend(ctx)
     if seg and seg.selected_index == 0 then
         local second = seg:get_candidate_at(1)
         if second and second.text and second.text ~= "" then
+            order.remove_pin(second.text)
             order.insert(key, second.text, 1)
         end
     end
-    order.remove(key, cand.text)
-    shape = shape .. next
-    order.insert(input .. "|" .. shape, cand.text, 1)
-    ctx:set_property(PROP, shape)
+    order.remove_pin(cand.text)
+    local target = base .. next
+    order.insert(input .. "|" .. target, cand.text, 1)
+    ctx:set_property(PROP, target)
     ctx:refresh_non_confirmed_composition()
 end
 
@@ -269,10 +290,23 @@ local function processor(key_event, env)
                 return 2
             end
             if code_part == "" or not ctx:has_menu() then
+                -- 数字选过候选后段会关闭、尾巴变成空段（无菜单）：
+                -- 空格没有要确认的东西，留在造词模式就好；
+                -- 否则会把 `` `哈级 `` 这种带标记的原文直接上屏
+                local seg = ctx.composition and ctx.composition:back()
+                if code_part ~= "" and seg and
+                        (seg._end - seg.start) == 0 then
+                    return 1
+                end
                 create.exit(ctx)
                 return 2  -- Editor::Confirm → ConfirmCurrentSelection || Commit
             end
-            return 2      -- 分词：确认当前段（_auto_commit 已关，不上屏）
+            -- 分词：确认当前段（_auto_commit 已关，不上屏）。先确认再清形码，
+            -- 顺序反了会用清掉形码后的候选（可能是别的词）；形码带进下一段
+            -- 会让造词模式用上一段的形码筛下一段的读音（simp 下尤明显）
+            ctx:confirm_current_selection()
+            ctx:set_property(PROP, "")
+            return 1
         end
         if code >= 0x30 and code <= 0x39 and not ctx:has_menu() then
             return 1  -- 防止落到 express_editor 的 DirectCommit

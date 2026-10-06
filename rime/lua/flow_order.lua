@@ -263,6 +263,71 @@ function M.get(key)
     return M.order[key]
 end
 
+-- text 在 input 下的 pin 级别（形码串；没有 pin 则 nil）
+function M.pin_level(input, text)
+    if not input or input == "" or not text or text == "" then
+        return nil
+    end
+    local prefix = input .. "|"
+    local n = #prefix
+    for key, list in pairs(M.order) do
+        if key:sub(1, n) == prefix then
+            for _, t in ipairs(list) do
+                if t == text then
+                    return key:sub(n + 1)
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- 把 text 从所有 pin 里删掉（保留 ~recent / ~secondary 特殊键）。
+-- 调频时词可能只以「补全」身份出现在当前级别（真正的 pin 在别的级别），
+-- 只 remove 当前 key 清不到，会留下重复 pin；所以移动 pin 前用这个。
+function M.remove_pin(text)
+    if not text or text == "" then
+        return
+    end
+    local keys = {}
+    for key, list in pairs(M.order) do
+        if key:find("|", 1, true) then
+            for _, t in ipairs(list) do
+                if t == text then
+                    keys[#keys + 1] = key
+                    break
+                end
+            end
+        end
+    end
+    for _, key in ipairs(keys) do
+        M.remove(key, text)
+    end
+end
+
+-- 列出同音码下所有形码级别的 pin（不含 ~ 特殊键）：
+-- 返回 { { key = 完整键, shape = 形码级别, list = 候选列表 }, ... }。
+-- 自造词只存在 pin 里，输入更短的码时也要能像词库词一样看到它，
+-- flow_filter 用这个做「同音码补全」。
+function M.pins_under(input)
+    if not input or input == "" then
+        return {}
+    end
+    local prefix = input .. "|"
+    local n = #prefix
+    local out = {}
+    for key, list in pairs(M.order) do
+        if key:sub(1, n) == prefix then
+            out[#out + 1] = {
+                key = key,
+                shape = key:sub(n + 1),
+                list = list,
+            }
+        end
+    end
+    return out
+end
+
 -- 次简覆盖：nil = 没有覆盖；"" = 显式取消（盖掉默认）
 function M.get_secondary(code)
     return M.secondary[code]
@@ -441,6 +506,25 @@ function M.move_down(key, text)
                 list[i], list[i + 1] = list[i + 1], list[i]
             end
             save_key(key)
+            return
+        end
+    end
+end
+
+-- 把 text 往下移一位；已在末位则保留（不删）。
+-- 自造词只存在 pin 里，到完整形码后 `=` 再用 move_down 会把词整条
+-- 删掉（从所有级别消失），所以这条路径用它：末位就待在末位。
+function M.move_down_keep(key, text)
+    local list = M.order[key]
+    if not list then
+        return
+    end
+    for i, t in ipairs(list) do
+        if t == text then
+            if i < #list then
+                list[i], list[i + 1] = list[i + 1], list[i]
+                save_key(key)
+            end
             return
         end
     end
