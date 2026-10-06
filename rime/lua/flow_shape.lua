@@ -37,11 +37,13 @@ local order = require("flow_order")
 local shapes = require("flow_shapes")
 local codes = require("flow_codes")
 local create = require("flow_create")
+local secondary = require("flow_secondary")
 
 local SHAPE_KEYS = { a = true, e = true, i = true, o = true, v = true }
 local PROP = "flow_shape"
 local MAX_SHAPE = 12
 local XK_BACKSPACE = 0xff08
+local XK_TAB = 0xff09
 local XK_RETURN = 0xff0d
 local XK_ESCAPE = 0xff1b
 local KEY_MINUS = 0x2d
@@ -221,6 +223,28 @@ local function processor(key_event, env)
     -- Esc：退出造词模式（输入交给 editor 清掉）
     if is_create and code == XK_ESCAPE then
         create.exit(ctx)
+        return 2
+    end
+
+    -- Tab：次简。当前码有次简 → 上屏次简；否则上屏当前候选，并把它
+    -- 学成该码首键的次简（如 `kffy` 的可以 → `k` 的次简）
+    if code == XK_TAB and not is_create then
+        if ctx:is_composing() and ctx:has_menu() then
+            local raw = ctx.input .. get_shape(ctx)
+            local want = secondary.get(raw)
+            local cand = ctx:get_selected_candidate()
+            if not want and raw ~= "" and cand and cand.text and cand.text ~= "" then
+                want = cand.text
+                secondary.set(raw:sub(1, 1), want)
+            end
+            if want and want ~= "" then
+                -- engine:commit_text 不会触发 commit_notifier，手动清状态
+                ctx:set_property(PROP, "")
+                ctx:clear()
+                env.engine:commit_text(want)
+            end
+            return 1
+        end
         return 2
     end
 

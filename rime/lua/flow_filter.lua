@@ -12,6 +12,7 @@ local order = require("flow_order")
 local shapes = require("flow_shapes")
 local codes = require("flow_codes")
 local create = require("flow_create")
+local secondary = require("flow_secondary")
 
 local ready = false
 local hint_on = true
@@ -233,6 +234,30 @@ local function filter(translation, env)
             end
         end
     end
+    -- 次简（原版「二重」）：当前码有次简时放到第 2 位、注释 🔹；
+    -- 不在候选里就注入一个（Tab 学来的可能是词组）
+    local secondary_text
+    if not creating then
+        secondary_text = secondary.get(input .. shape)
+        if secondary_text then
+            local found
+            for i, cand in ipairs(chosen) do
+                if cand.text == secondary_text then
+                    found = i
+                    break
+                end
+            end
+            if not found then
+                chosen[#chosen + 1] =
+                    Candidate("flow_order", span_start, span_end, secondary_text, "")
+                found = #chosen
+            end
+            if found > 2 then
+                local cand = table.remove(chosen, found)
+                table.insert(chosen, 2, cand)
+            end
+        end
+    end
     -- 形码显示：有候选时接在候选 preedit 上（annotate）；候选全空时
     -- preedit 会退回原始输入，改挂在段的 prompt 上（插在 preedit 结尾）
     local seg = ctx.composition and ctx.composition:back()
@@ -246,7 +271,10 @@ local function filter(translation, env)
     -- 纯笔码输入：手动 pin 优先，其余保持原顺序，不发音码/形码提示
     if is_shape_only_input(input) then
         top_cache[key] = chosen[1] and chosen[1].text or nil
-        for _, cand in ipairs(chosen) do
+        for idx, cand in ipairs(chosen) do
+            if secondary_text and cand.text == secondary_text and idx > 1 then
+                cand.comment = "🔹"
+            end
             yield(cand)
         end
         return
@@ -282,16 +310,32 @@ local function filter(translation, env)
         hint_input = create.strip_marker(hint_input)
     end
     local hint_ctx = {}
-    for _, cand in ipairs(final) do
+    -- 不可顶功提示（原版 ⛔️）：纯音码、不足 4 键、还没形码时，
+    -- 再加音码也不会顶功上屏（只会继续延长输入）
+    local code = input:sub(span_start + 1, span_end)
+    if creating then
+        code = create.strip_marker(code)
+    end
+    local no_topup = shape == "" and #code >= 1 and #code < 4 and
+        code:match("^[bcdfghjklmnpqrstuwxyz;]+$") ~= nil
+    for i, cand in ipairs(final) do
         if recent and recent[cand.text] then
             -- 最近造词：不参与提示计算，注释标「最近」
             cand.comment = "最近"
+        elseif secondary_text and cand.text == secondary_text and i > 1 then
+            -- 次简：注释标 🔹（和原版一样），形码照常显示在 preedit 上；
+            -- 次简本身就是首选时不标（Tab 仍然上屏它）
+            annotate(cand, shape)
+            cand.comment = "🔹"
         else
             apply_hint(cand, hint_input, shape, base, excluded, current_top, hint_ctx)
             annotate(cand, shape)
             if creating and hint_input == "" then
                 -- 只有 `：在标点的〔半角〕/〔全角〕提示后补「造词模式」
                 cand.comment = (cand.comment or "") .. "造词模式"
+            end
+            if i == 1 and no_topup then
+                cand.comment = "⛔️" .. (cand.comment or "")
             end
         end
         yield(cand)

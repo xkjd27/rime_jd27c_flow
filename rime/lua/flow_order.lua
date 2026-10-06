@@ -16,12 +16,14 @@
 --   「候选词 + 空格 + 完整音节」（音码削减过的 pin，如 ``你 ny``），
 --   供 `=` 还原到完整音节时使用（没有记录时回退反查）。
 -- 另有特殊 key "~recent"：最近造词记录（造词模式只按 ` 时列出、= 删除）。
+-- 特殊 key "~secondary"：次简表（码=文本，Tab 学习/用户覆盖）。
 --
 -- 调试用 .custom 切到 txt 即可手改数据。
 
 local M = {}
 M.order = {}
 M.syllables = {}   -- key -> {候选词 = 完整音节}
+M.secondary = {}   -- 次简：码 -> 文本（用户覆盖/学习，见 ~secondary）
 M.key_prefix = "ord/"
 M.ready = false
 M.users = 0
@@ -71,6 +73,34 @@ local function serialize_value(key)
     return table.concat(parts, "\t")
 end
 
+-- ---------------- 次简表（特殊 key ~secondary） ----------------
+-- value 格式：码=文本，\t 分隔；文本为空表示「取消默认次简」。
+-- 码和用户实际敲的键一致（音码 + 形码，如 z / zto / br / o）。
+
+local SECONDARY_KEY = "~secondary"
+
+local function parse_secondary(value)
+    M.secondary = {}
+    for entry in value:gmatch("[^\t]+") do
+        local code, text = entry:match("^(.-)=(.*)$")
+        if code and code ~= "" then
+            M.secondary[code] = text
+        end
+    end
+end
+
+local function serialize_secondary()
+    local parts = {}
+    for code, text in pairs(M.secondary) do
+        parts[#parts + 1] = code .. "=" .. text
+    end
+    if #parts == 0 then
+        return nil
+    end
+    table.sort(parts)
+    return table.concat(parts, "\t")
+end
+
 -- ---------------- txt 后端 ----------------
 
 local function load_txt()
@@ -85,7 +115,11 @@ local function load_txt()
                 fields[#fields + 1] = field
             end
             if #fields >= 2 then
-                parse_value(fields[1], table.concat(fields, "\t", 2))
+                if fields[1] == SECONDARY_KEY then
+                    parse_secondary(table.concat(fields, "\t", 2))
+                else
+                    parse_value(fields[1], table.concat(fields, "\t", 2))
+                end
             end
         end
     end
@@ -104,6 +138,10 @@ local function save_txt()
             f:write(key, "\t", value, "\n")
         end
     end
+    local sec = serialize_secondary()
+    if sec then
+        f:write(SECONDARY_KEY, "\t", sec, "\n")
+    end
     f:close()
 end
 
@@ -115,7 +153,12 @@ local function load_db()
         return
     end
     for k, v in acc:iter() do
-        parse_value(k:sub(#M.key_prefix + 1), v)
+        local key = k:sub(#M.key_prefix + 1)
+        if key == SECONDARY_KEY then
+            parse_secondary(v)
+        else
+            parse_value(key, v)
+        end
     end
     -- DbAccessor 要先释放，之后 close 才安全
     acc = nil
@@ -130,7 +173,12 @@ local function save_key(key)
     if not M.db then
         return
     end
-    local value = serialize_value(key)
+    local value
+    if key == SECONDARY_KEY then
+        value = serialize_secondary()
+    else
+        value = serialize_value(key)
+    end
     if value then
         M.db:update(M.key_prefix .. key, value)
     else
@@ -219,6 +267,20 @@ end
 
 function M.get(key)
     return M.order[key]
+end
+
+-- 次简覆盖：nil = 没有覆盖；"" = 显式取消（盖掉默认）
+function M.get_secondary(code)
+    return M.secondary[code]
+end
+
+-- 记一条次简覆盖/学习；text 为空表示取消该码的默认次简
+function M.set_secondary(code, text)
+    if not code or code == "" then
+        return
+    end
+    M.secondary[code] = text or ""
+    save_key(SECONDARY_KEY)
 end
 
 -- 音码削减过的候选 @ key 上保存的完整音节

@@ -203,22 +203,50 @@ def iter_dict_rows(path):
 def load_shape_entries(path):
     """从原版 buchong 里提取纯形码（笔形）条目：code 全部是 aeiov。
 
-    包括原版的「形简」「补充提示」「部首偏旁」三段。
+    包括原版的「形简」「补充提示」「部首偏旁」三段；「形简」段里每个码
+    只保留第一条（形简本体，如 又a）——多出来的（如 识o）原来排在
+    shape.dict 的 2 号位，现在交给次简表（flow_secondary.lua）管。
+    返回 (entries, extras)，extras 只用于打印。
     """
     entries = []
+    extras = []
     seen = set()
-    for row in iter_dict_rows(path):
-        if len(row) < 2 or not row[0] or not row[1]:
-            continue
-        code = row[1].strip()
-        if not code or not re.fullmatch(r'[aeiov]+', code):
-            continue
-        key = (row[0], code)
-        if key in seen:
-            continue
-        seen.add(key)
-        entries.append((row[0], code))
-    return entries
+    first_of_code = set()
+    section = ''
+    in_header = False
+    with open(path, encoding='utf-8') as f:
+        for line in f:
+            line = line.rstrip('\n')
+            if not line:
+                continue
+            if line.startswith('#'):
+                section = line.lstrip('#').strip()
+                continue
+            if line == '---':
+                in_header = True
+                continue
+            if line == '...':
+                in_header = False
+                continue
+            if in_header:
+                continue
+            row = line.split('\t')
+            if len(row) < 2 or not row[0] or not row[1]:
+                continue
+            code = row[1].strip()
+            if not code or not re.fullmatch(r'[aeiov]+', code):
+                continue
+            if section == '形简':
+                if code in first_of_code:
+                    extras.append((row[0], code))
+                    continue
+                first_of_code.add(code)
+            key = (row[0], code)
+            if key in seen:
+                continue
+            seen.add(key)
+            entries.append((row[0], code))
+    return entries, extras
 
 
 def load_original_first(path):
@@ -721,8 +749,11 @@ def main():
               % (len(first), changed, missing))
     else:
         print('原版首选对齐：找不到 %s，跳过' % orig_danzi)
-    shape_dict = load_shape_entries(
+    shape_dict, shape_extras = load_shape_entries(
         os.path.join(args.source, 'rime', 'xkjd27c.buchong.dict.yaml'))
+    if shape_extras:
+        print('形简段多出来的条目（交给次简表 flow_secondary.lua）：%s'
+              % ' '.join(t + c for t, c in shape_extras))
 
     os.makedirs(args.out, exist_ok=True)
     scale = args.weight_scale
