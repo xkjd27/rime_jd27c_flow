@@ -65,6 +65,11 @@ local function collect_exclusions(input, shape)
     return excluded
 end
 
+-- 纯形码输入（只有 aeiov）：走笔码表，不做音码自动前进/提示
+local function is_shape_only_input(s)
+    return s ~= "" and s:match("^[aeiov]+$") ~= nil
+end
+
 -- 把当前形码接到候选 preedit 末尾显示
 local function annotate(cand, shape)
     if shape == "" then
@@ -163,6 +168,16 @@ local function filter(translation, env)
         return
     end
     local chosen = apply_manual_order(base, key)
+
+    -- 纯笔码输入：手动 pin 优先，其余保持原顺序，不发音码/形码提示
+    if is_shape_only_input(input) then
+        top_cache[key] = chosen[1] and chosen[1].text or nil
+        for _, cand in ipairs(chosen) do
+            yield(cand)
+        end
+        return
+    end
+
     local excluded = collect_exclusions(input, shape)
 
     -- 该 key 有手动顺序：不再做自动前进

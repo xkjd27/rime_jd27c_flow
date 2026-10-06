@@ -8,6 +8,7 @@ sort: by_weight
 use_preset_vocabulary: false
 import_tables:
   - xkjd27c_flow.danzi
+  - xkjd27c_flow.bima
 ...
 重中之重	; ; ; ;	367
 政治制度	; ; ; d	200

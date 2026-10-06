@@ -1,7 +1,7 @@
 # 键道27C Flow（音码 + 形码筛选 + 顶功）
 
 星空键道27C 的**纯音码**方案：只保留音码（声母 + 韵母，一字两码），
-词组用键道原版简码，配合 **形码筛选** 与 **顶功**：
+词组用键道原版简码，配合 **形码筛选/纯笔码** 与 **顶功**：
 
 * 单字：2 键全码 + 1 键声母码；
 * 2 字词：音音全码（`wumk` → 我们）；
@@ -9,6 +9,8 @@
 * 4 字词：4 个首字母（`wlyy` → 万里长城）；
 * 5 字以上：前 3 首 + 末 1 首（`yfq;` → 吃一堑长一智）；
 * 形码 `aeiov` 跟在音码后筛选（末字完整、前面各字一省）；
+* 纯形码（笔码）：只打 `aeiov` 时直接查笔码表（`a`→又、`ai`→阝、`aaa`→巛），
+  没有匹配时回车原样上屏；
 * 顶功：4 码后 / 形码后再按音码键自动上屏。
 
 * `rime_jd27c`：原版键道27C（音码 + 形码、顶功）
@@ -95,6 +97,21 @@
 由 `lua/flow_shape.lua`（取键、顶功）+ `lua/flow_filter.lua`（筛选、显示）
 处理。
 
+### 纯笔码（只打 aeiov）
+
+输入串里还没有音码（只有 `aeiov`）时，形码键不再进入筛选，而是作为
+**纯笔码输入**直接查笔码表（来自原版键道 `buchong` 的「形简 / 补充提示 /
+部首偏旁」三段）：
+
+* `a` → 又、乛、氵…；`v` → 有、木、土…；`ai` → 阝、卩、丩、凵…；`aaa` → 巛；
+* 可以连打：`ae` → 又得、`aiv` → 阝有；
+* 保持原表顺序、不发音码/形码候选提示；
+* 手动词序照常：`-` 把候选提到本级首位、`=` 在本级内下移；
+* 没有匹配（或想直接输入字母）时按回车，原样上屏输入的字母串。
+
+笔码表在 `xkjd27c_flow.bima.dict.yaml`，由 `tools/build_flow_dict.py` 生成，
+两个词库变体都 import 它。
+
 ## 安装
 
 1. 把 `rime/` 下的文件和 `lua/flow_filter.lua` 复制到 Rime 用户目录：
@@ -111,6 +128,7 @@
    xkjd27c_flow.ice.dict.yaml    # 默认词库（rime-ice，88 万词）
    xkjd27c_flow.simp.dict.yaml   # 小词库（pinyin_simp，4.8 万词）
    xkjd27c_flow.danzi.dict.yaml  # 单字（两个变体共用）
+   xkjd27c_flow.bima.dict.yaml   # 笔码表（纯形码，两个变体共用）
    xkjd27c_flow.shape.txt        # 形码表（ZiDB 笔形）
    lua/flow_filter.lua           # 节奏校验 + 形码筛选 + 自动前进 + 候选提示
    lua/flow_shape.lua            # 形码键处理 + 顶功
@@ -144,6 +162,8 @@
 * 单字 2 键；2 字词音音 4 键；3/4 字词首字母；5 字以上前三首 + 末一首。
 * 形码 `aeiov` 跟在音码后面，按「前 n-1 首键 + 末字完整形码」筛选：
   `hjmo` → 哈基米。
+* **纯笔码**：只按 `aeiov` 时直接查笔码表（`a`→又、`ai`→阝、`aaa`→巛），
+  回车原样上屏。
 * **顶功**：4 码后再按音码键自动上屏；形码后再按音码键自动上屏。
 * 例：`wlyy` → 万里长城；`yfq;` → 吃一堑长一智（不首选时用形码收窄）。
 * **手动调序**：候选上按 `-` 上调、`=` 下调（见下节），不依赖词频学习。
@@ -219,6 +239,7 @@
 * `xkjd27c_flow.ice.dict.yaml`：默认词库（rime-ice，约 88 万词）；
 * `xkjd27c_flow.simp.dict.yaml`：小词库（pinyin_simp，约 4.8 万词）；
 * `xkjd27c_flow.danzi.dict.yaml`：单字（两个变体共用，import）；
+* `xkjd27c_flow.bima.dict.yaml`：笔码表（纯形码条目，两个变体共用，import）；
 * `xkjd27c_flow.shape.txt`：形码表。
 
 需要重新生成时（**一次生成两个变体**）：
@@ -265,6 +286,9 @@ python3 tools/build_flow_dict.py
   整词由音节序列组成；不要写成长串，否则大数据量时 prism 会爆炸。
 * 两份词库（`.ice` / `.simp`）都 import 共用单字表 `xkjd27c_flow.danzi`；
   切换只需改 `translator/dictionary`。
+* 笔码表：从原版 `xkjd27c.buchong.dict.yaml` 提取 code 全为 `aeiov` 的条目
+  （「形简 / 补充提示 / 部首偏旁」），保持原顺序生成
+  `xkjd27c_flow.bima.dict.yaml`；两个变体都 import 它。
 * 形码不进码表：另生成 `xkjd27c_flow.shape.txt`（ZiDB 前 4 笔形，
   8 千余字），运行时由 Lua 用来筛选候选。
 
@@ -302,7 +326,7 @@ printf 'patch:\n  schema_list:\n    - schema: xkjd27c_flow\n' \
 ## 目录
 
 ```
-rime/     Rime 方案、词库（.ice 默认 / .simp）、单字表、形码表
+rime/     Rime 方案、词库（.ice 默认 / .simp）、单字表、笔码表、形码表
 rime/lua/ 节奏校验、形码筛选 / 顶功（Lua）
 tools/    码表生成脚本、librime 测试器
 docs/     布局图、设计记录（docs/cadence.md）

@@ -200,6 +200,27 @@ def iter_dict_rows(path):
             yield line.split('\t')
 
 
+def load_bima_entries(path):
+    """从原版 buchong 里提取纯形码（笔码）条目：code 全部是 aeiov。
+
+    包括原版的「形简」「补充提示」「部首偏旁」三段。
+    """
+    entries = []
+    seen = set()
+    for row in iter_dict_rows(path):
+        if len(row) < 2 or not row[0] or not row[1]:
+            continue
+        code = row[1].strip()
+        if not code or not re.fullmatch(r'[aeiov]+', code):
+            continue
+        key = (row[0], code)
+        if key in seen:
+            continue
+        seen.add(key)
+        entries.append((row[0], code))
+    return entries
+
+
 def load_dict(path, default_weight=1.0):
     """读取标准拼音词库。
 
@@ -473,6 +494,17 @@ use_preset_vocabulary: false
 ...
 """
 
+BIMA_HEADER = """\
+# 键道27C Flow 笔码表（纯形码 aeiov）
+# 由 tools/build_flow_dict.py 从原版 buchong「形简/补充提示/部首偏旁」提取
+---
+name: xkjd27c_flow.bima
+version: "1.0"
+sort: original
+use_preset_vocabulary: false
+...
+"""
+
 def variant_header(variant, note):
     return (
         '# 键道27C Flow 词库（%s）\n'
@@ -485,6 +517,7 @@ def variant_header(variant, note):
         'use_preset_vocabulary: false\n'
         'import_tables:\n'
         '  - xkjd27c_flow.danzi\n'
+        '  - xkjd27c_flow.bima\n'
         '...\n' % (note, variant))
 
 
@@ -629,6 +662,8 @@ def main():
     char_codes = build_char_codes(zidb, zidb_static, char_w,
                                   char_reading_w, args.default_weight)
     danzi = build_danzi(char_codes, args.initial_weight)
+    bima = load_bima_entries(
+        os.path.join(args.source, 'rime', 'xkjd27c.buchong.dict.yaml'))
 
     os.makedirs(args.out, exist_ok=True)
     scale = args.weight_scale
@@ -642,6 +677,13 @@ def main():
         f.write('# 键道27C Flow 形码表（ZiDB 前 4 笔画 -> aeiov）\n')
         for char, code in sorted(shapes.items()):
             f.write('%s\t%s\n' % (char, code))
+
+    # 笔码表：原版 buchong 的纯形码条目（代码全为 aeiov），保持原顺序
+    bima_path = os.path.join(args.out, 'xkjd27c_flow.bima.dict.yaml')
+    with open(bima_path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(BIMA_HEADER)
+        for text, code in bima:
+            f.write('%s\t%s\t1\n' % (text, code))
 
     # 旧版生成物（cizu / 单一主码表）清理掉，避免混淆
     for stale in ('xkjd27c_flow.cizu.dict.yaml', 'xkjd27c_flow.dict.yaml'):
@@ -660,7 +702,7 @@ def main():
         print('词库 %s：%d 条（无法注音：拼音词 %d，自动注音 %d）'
               % (variant, n, skipped['pinyin'], skipped['vocab']))
 
-    print('单字 %d 条，形码 %d 字' % (n1, len(shapes)))
+    print('单字 %d 条，笔码 %d 条，形码 %d 字' % (n1, len(bima), len(shapes)))
 
 
 if __name__ == '__main__':

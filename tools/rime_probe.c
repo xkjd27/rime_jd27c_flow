@@ -65,8 +65,9 @@ static void run_case(const char* keys, int select_index) {
   }
   printf("keys \"%s\":\n", keys);
   for (const char* p = keys; *p; ++p) {
-    /* 允许用 ` 表示空格，~ 表示 BackSpace */
-    int kc = (*p == '`') ? ' ' : (*p == '~') ? 0xff08 : (unsigned char)*p;
+    /* 允许用 ` 表示空格，~ 表示 BackSpace，\\n 表示回车 */
+    int kc = (*p == '`') ? ' ' : (*p == '~') ? 0xff08
+             : (*p == '\n') ? 0xff0d : (unsigned char)*p;
     api->process_key(s, kc, 0);
     /* 模拟 UI 每键拉一次候选，让 menu/selected candidate 准备好 */
     drain_candidates(s);

@@ -20,9 +20,13 @@
 --     则反查单字码；其它情况补下一笔形码并 pin 到更长一级，
 --     同时从更短一级的 pin 列表里移走（保持当前候选，不锁死短码）；
 --     到完整形码后则在该 key 内下移一位。
+--   * 纯笔码（输入只有 aeiov）：码即完整形码，只有本级——`-` 把候选提到
+--     本级首位（不顺延）、`=` 在本级内下移。
 --
 -- 行为：
---   * 形码键      -> 追加到 flow_shape（最长 12 键），刷新候选
+--   * 形码键      -> 输入串只有 aeiov 时进入输入串，由笔码表（xkjd27c_flow.bima）
+--                    匹配（纯笔码）；否则追加到 flow_shape（最长 12 键），刷新候选
+--   * 回车        -> 没有候选时原样上屏输入（输入 + 形码）
 --   * BackSpace   -> flow_shape 非空则删掉最后一个形码
 --   * `-` / `=`   -> 手动调序（见上）
 --   * 音码键      -> 若 flow_shape 非空（顶码）或音码已达 4 键（四码）则先上屏
@@ -36,8 +40,14 @@ local SHAPE_KEYS = { a = true, e = true, i = true, o = true, v = true }
 local PROP = "flow_shape"
 local MAX_SHAPE = 12
 local XK_BACKSPACE = 0xff08
+local XK_RETURN = 0xff0d
 local KEY_MINUS = 0x2d
 local KEY_EQUAL = 0x3d
+
+-- 纯形码输入（只有 aeiov）：走笔码表，不走音码逻辑
+local function is_shape_only(s)
+    return s ~= "" and s:match("^[aeiov]+$") ~= nil
+end
 
 local function get_shape(ctx)
     return ctx:get_property(PROP) or ""
@@ -104,7 +114,12 @@ local function promote(ctx)
     end
     local shape = get_shape(ctx)
     local input = ctx.input
-    if shape ~= "" then
+    if is_shape_only(input) then
+        -- 纯笔码：码即完整形码，没有更短的级别；把候选提到本级首位
+        -- （不走 place，避免被顶掉的候选顺延到笔码输入打不出的更长 key）
+        order.remove(input .. "|", cand.text)
+        order.insert(input .. "|", cand.text, 1)
+    elseif shape ~= "" then
         order.remove(input .. "|" .. shape, cand.text)
         local target = shape:sub(1, -2)
         place(cand.text, input, target)
@@ -133,6 +148,12 @@ local function lower_or_extend(ctx)
     local shape = get_shape(ctx)
     local input = ctx.input
     local key = input .. "|" .. shape
+    if is_shape_only(input) then
+        -- 纯笔码：码即完整形码，已是最长级别，在本 key 内下移一位
+        order.move_down(key, cand.text)
+        ctx:refresh_non_confirmed_composition()
+        return
+    end
     if shape == "" and #input == 1 then
         local syl = order.get_syllable(key, cand.text)
         if not syl then
@@ -192,6 +213,19 @@ local function processor(key_event, env)
         return 2
     end
 
+    -- 回车：没有候选时上屏原始字母（纯笔码、无匹配的自定义输入）
+    if code == XK_RETURN then
+        if ctx:is_composing() and not ctx:get_selected_candidate() then
+            local text = ctx.input .. get_shape(ctx)
+            if text ~= "" then
+                ctx:clear()
+                env.engine:commit_text(text)
+                return 1
+            end
+        end
+        return 2
+    end
+
     if code < 0x20 or code >= 0x7f then
         return 2
     end
@@ -200,12 +234,17 @@ local function processor(key_event, env)
     -- 形码键
     if SHAPE_KEYS[key] then
         if ctx:is_composing() then
+            -- 纯笔码输入（还没有音码）：形码进入输入串，交给笔码表匹配
+            if ctx.input == "" or is_shape_only(ctx.input) then
+                return 2
+            end
             local s = get_shape(ctx)
             if #s < MAX_SHAPE then
                 set_shape(ctx, s .. key)
             end
+            return 1
         end
-        return 1
+        return 2
     end
 
     -- 音码键
