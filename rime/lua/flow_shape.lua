@@ -222,6 +222,11 @@ local function processor(key_event, env)
     if code == XK_TAB and not is_create and secondary.enabled() then
         if ctx:is_composing() and ctx:has_menu() then
             local raw = ctx.input .. get_shape(ctx)
+            -- 首码是笔码（纯笔码输入）时不给次简，Tab 直接吞掉：
+            -- 笔码候选里没有别的字可选
+            if not raw:match("^[bcdfghjklmnpqrstuwxyz;]") then
+                return 1
+            end
             local want = secondary.get(raw)
             local cand = ctx:get_selected_candidate()
             if not want and raw ~= "" and cand and cand.text and cand.text ~= "" then
