@@ -54,22 +54,18 @@ speller:
   alphabet: "abcdefghijklmnopqrstuvwxyz;"
 
 translator:
-  # 词库变体：.ice（rime-ice，默认）| .simp（pinyin_simp）
-  # 切到 simp：xkjd27c_flow.custom.yaml 里 patch 本项
+  # 词库：xkjd27c_flow.ice（雾凇拼音）| xkjd27c_flow.simp（袖珍简化字）
   dictionary: xkjd27c_flow.ice
   enable_user_dict: false
-  # 纯词表匹配（逐词）：不做整句 DP、不做前缀补全；
-  # 码表连写（wumk / yfq; 等），直接按整串匹配。
   enable_sentence: false
   enable_completion: false
   enable_encoder: false
   enable_charset_filter: false
 
-# 手动调序存储后端：leveldb（默认）| txt（纯文本，方便手改/调试）
-# 用户可在 xkjd27c_flow.custom.yaml 里 patch：flow_order/backend: txt
+# 调序与造词引擎数据库
 flow_order:
+  # 存储后端：leveldb（默认，高性能）| txt（纯文本，方便调试与手动修改）
   backend: leveldb
-  # 两个词库变体共用一份调序数据（切词库不丢 pin）
   name: xkjd27c_flow.order
 
 # 候选提示：非首选候选右侧显示「让它成为首选还需要按的键」
@@ -80,6 +76,10 @@ flow_hint:
   # 不可顶功提示（⛔️）
   topup: true
 # 全关用 flow_hint: false（关了提示也就不排序）
+
+# 次简（原版「二重」）：候选第 2 位标 🔹，Tab 上屏/学习；
+# 设为 false 整块关掉（Tab 不处理、不显示次简候选、不学习）
+flow_secondary: true
 
 jffh:
   opencc_config: s2t.json

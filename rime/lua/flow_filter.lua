@@ -345,7 +345,7 @@ local function filter(translation, env)
             annotate(cand, shape)
             if creating and hint_input == "" then
                 -- 只有 `：在标点的〔半角〕/〔全角〕提示后补「造词模式」
-                cand.comment = (cand.comment or "") .. "造词模式"
+                cand.comment = (cand.comment or "") .. "造词"
             end
             if i == 1 and hint_on and hint_topup and no_topup then
                 cand.comment = "⛔️" .. (cand.comment or "")
