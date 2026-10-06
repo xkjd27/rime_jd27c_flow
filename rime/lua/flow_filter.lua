@@ -376,10 +376,22 @@ local function filter(translation, env)
     else
         local has_excluded = next(excluded) ~= nil
         final = {}
+        local full_code = {}   -- 全码命中但被自动前进排除的，低优先级兜底
         for _, cand in ipairs(chosen) do
-            if not (has_excluded and excluded[cand.text]) then
+            if has_excluded and excluded[cand.text] then
+                -- 音码已完整 + 形码刚好是完整形码 = 命中全码：无视 auto
+                -- advance，补在候选最后（组内保持 chosen 顺序：自造词在前，
+                -- 其余按权重序）；纯形码输入不算
+                if shape ~= "" and shapes.expected(cand.text) == shape and
+                        codes.next_keys(cand.text, code_text) == nil then
+                    full_code[#full_code + 1] = cand
+                end
+            else
                 final[#final + 1] = cand
             end
+        end
+        for _, cand in ipairs(full_code) do
+            final[#final + 1] = cand
         end
         if #final == 0 then  -- 全被排除则回退，避免空菜单
             final = chosen
