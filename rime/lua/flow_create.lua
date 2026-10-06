@@ -6,14 +6,16 @@
 --   * 候选提示照常；空格/数字用于分词选择（确认当前段 / 选第 N 个候选），
 --     都不上屏；非法内容（再按 `、没候选时的空格、标点）原样上屏退出；
 --   * `-`：把当前候选 pin 在「音码|形码」首位（造词全码，如 其实我觉得 →
---     quwd + voeoeeoi），退出造词并还原成普通输入（保留形码）；
---     之后继续按 `-` 一级一级剥形码调整权重；
+--     quwd + voeoeeoi）；如果输入是顶功前进后的拼接全码（`jm;yl），
+--     音码归位到方案简码（简直了 → j;l）；退出造词并还原成普通输入
+--     （保留形码）；之后继续按 `-` 一级一级剥形码调整权重；
 --   * `=` 无效；Esc，或退格到空输入退出。
 --
 -- 入库即 flow_order 里的一条 pin，不再单独维护 words 库：造出来的词一定
 -- 是当前码上的现成候选，pin 住它就能到首位。
 
 local order = require("flow_order")
+local codes = require("flow_codes")
 
 local M = {}
 
@@ -101,6 +103,12 @@ function M.store(ctx)
     local sound = M.strip_marker(ctx.input)
     local shape = ctx:get_property("flow_shape") or ""
     local phrase = M.strip_marker(ctx:get_commit_text())
+    -- 顶功前进过的话（`jm;yl → 简直l），输入是各字全码的拼接，不是词组的
+    -- 方案码；pin 的 key 归位到方案简码（简直了 → j;l），以后打简码就能
+    -- 把它调出来
+    if phrase ~= "" and sound ~= "" and not codes.is_scheme_code(phrase, sound) then
+        sound = codes.scheme_code(phrase) or sound
+    end
     local ok = phrase ~= "" and sound ~= ""
     if ok then
         order.insert(sound .. "|" .. shape, phrase, 1)

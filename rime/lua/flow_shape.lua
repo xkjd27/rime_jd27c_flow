@@ -29,7 +29,8 @@
 --   * 回车        -> 原样上屏输入（输入 + 形码）
 --   * BackSpace   -> flow_shape 非空则删掉最后一个形码
 --   * `-` / `=`   -> 手动调序（见上）
---   * 音码键      -> 若 flow_shape 非空（顶码）或音码已达 4 键（四码）则先上屏
+--   * 音码键      -> 若 flow_shape 非空（顶码）或音码已达 4 键（四码）则先上屏；
+--                    造词模式下不上屏，改为确认当前段、继续新段（顶功前进）
 --   * 其它键      -> 交给后续组件；上屏后由 commit_notifier 清状态
 
 local order = require("flow_order")
@@ -314,7 +315,17 @@ local function processor(key_event, env)
     -- 音码键
     if key:match("^[a-z;]$") then
         if is_create then
-            -- 造词模式：禁用顶功/四码自动上屏
+            -- 造词模式：不自动上屏，但顶功照常「前进」——当前段音码满
+            -- 4 键或已有形码时，把这一段确认掉（composition 保留），
+            -- 下一个键开始新的一段：`jm;yl 会边打边前进成「`简直l」
+            local seg = ctx.composition and ctx.composition:back()
+            local seg_len = seg and (seg._end - seg.start) or 0
+            local s = get_shape(ctx)
+            if (s ~= "" or seg_len >= 4) and ctx:is_composing() and
+                    ctx:get_selected_candidate() then
+                ctx:confirm_current_selection()
+                ctx:set_property(PROP, "")
+            end
             return 2
         end
         local s = get_shape(ctx)

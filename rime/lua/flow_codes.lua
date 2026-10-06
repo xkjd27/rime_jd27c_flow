@@ -191,4 +191,21 @@ function M.next_keys(text, input)
     return best
 end
 
+-- 词组的方案码（取权重最高的推导码）：2 字音音全码 / 3-4 字首字母 /
+-- 5+ 字前三首 + 末首；多音字按单字表权重挑。
+function M.scheme_code(text)
+    local list = build_codes(text)
+    return list[1] and list[1].code
+end
+
+-- code 是否是 text 的一个方案码（含多音变体）
+function M.is_scheme_code(text, code)
+    for _, e in ipairs(build_codes(text)) do
+        if e.code == code then
+            return true
+        end
+    end
+    return false
+end
+
 return M

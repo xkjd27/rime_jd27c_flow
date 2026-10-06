@@ -202,11 +202,12 @@ local function filter(translation, env)
             base[#base + 1] = cand
         end
     end
-    if #base == 0 then
+    -- 先应用 pin：列表里有、翻译没给的词会被补成候选（造词存的组合词）；
+    -- 全空才退出
+    local chosen = apply_manual_order(base, key, span_start, span_end)
+    if #chosen == 0 then
         return
     end
-
-    local chosen = apply_manual_order(base, key, span_start, span_end)
 
     -- 纯笔码输入：手动 pin 优先，其余保持原顺序，不发音码/形码提示
     if is_shape_only_input(input) then
