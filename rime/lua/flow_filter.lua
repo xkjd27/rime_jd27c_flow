@@ -5,7 +5,8 @@
 --    preedit 末尾；
 -- 3. 自动前进：每多一个键（声码或形码），排除所有更短前缀当时的首选，
 --    让首选项前进（细选）；
--- 4. 手动调序：flow_order 里记录的候选排前面（该 key 有记录时不再自动前进）。
+-- 4. 手动调序：flow_order 里记录的候选排前面（该 key 有记录时不再自动前进）；
+-- 5. 造词模式只按 ` 时：候选里补上最近的造词（注释「最近」），供 = 删除。
 
 local order = require("flow_order")
 local shapes = require("flow_shapes")
@@ -207,6 +208,29 @@ local function filter(translation, env)
     end
     -- 先应用 pin：列表里有、翻译没给的词会被补成候选（造词存的组合词）
     local chosen = apply_manual_order(base, key, span_start, span_end)
+    -- 造词模式还没打码（只有 `）：候选里补上最近的造词，供 = 删除。
+    -- 注释标「最近」，不参与提示计算（见下面 yield 前的分支）
+    local recent
+    if creating and create.strip_marker(input) == "" then
+        local list = order.recent(8)
+        if #list > 0 then
+            recent = {}
+            for _, text in ipairs(list) do
+                recent[text] = true
+                local dup = false
+                for _, cand in ipairs(chosen) do
+                    if cand.text == text then
+                        dup = true
+                        break
+                    end
+                end
+                if not dup then
+                    chosen[#chosen + 1] =
+                        Candidate("flow_order", span_start, span_end, text, "")
+                end
+            end
+        end
+    end
     -- 形码显示：有候选时接在候选 preedit 上（annotate）；候选全空时
     -- preedit 会退回原始输入，改挂在段的 prompt 上（插在 preedit 结尾）
     local seg = ctx.composition and ctx.composition:back()
@@ -257,11 +281,16 @@ local function filter(translation, env)
     end
     local hint_ctx = {}
     for _, cand in ipairs(final) do
-        apply_hint(cand, hint_input, shape, base, excluded, current_top, hint_ctx)
-        annotate(cand, shape)
-        if creating and hint_input == "" then
-            -- 只有 `：在标点的〔半角〕/〔全角〕提示后补「造词模式」
-            cand.comment = (cand.comment or "") .. "造词模式"
+        if recent and recent[cand.text] then
+            -- 最近造词：不参与提示计算，注释标「最近」
+            cand.comment = "最近"
+        else
+            apply_hint(cand, hint_input, shape, base, excluded, current_top, hint_ctx)
+            annotate(cand, shape)
+            if creating and hint_input == "" then
+                -- 只有 `：在标点的〔半角〕/〔全角〕提示后补「造词模式」
+                cand.comment = (cand.comment or "") .. "造词模式"
+            end
         end
         yield(cand)
     end

@@ -28,7 +28,7 @@
 --                    匹配（纯笔码）；否则追加到 flow_shape（最长 12 键），刷新候选
 --   * 回车        -> 原样上屏输入（输入 + 形码）
 --   * BackSpace   -> flow_shape 非空则删掉最后一个形码
---   * `-` / `=`   -> 手动调序（见上）
+--   * `-` / `=`   -> 手动调序（见上）；造词模式下 `-` 入库退出、`=` 删除
 --   * 音码键      -> 若 flow_shape 非空（顶码）或音码已达 4 键（四码）则先上屏；
 --                    造词模式下不上屏，改为确认当前段、继续新段（顶功前进）
 --   * 其它键      -> 交给后续组件；上屏后由 commit_notifier 清状态
@@ -253,11 +253,13 @@ local function processor(key_event, env)
         end
     end
 
-    -- `-` / `=`：造词模式 `-` 入库（并退出），`=` 无效；否则手动调序
+    -- `-` / `=`：造词模式 `-` 入库（并退出）、`=` 删除；否则手动调序
     if code == KEY_MINUS or code == KEY_EQUAL then
         if is_create then
             if code == KEY_MINUS then
                 create.store(ctx)
+            else
+                create.delete(ctx)
             end
             return 1
         end

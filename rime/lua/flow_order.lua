@@ -15,6 +15,7 @@
 -- value 格式：条目用 \t 分隔；条目 = 候选词，或
 --   「候选词 + 空格 + 完整音节」（音码削减过的 pin，如 ``你 ny``），
 --   供 `=` 还原到完整音节时使用（没有记录时回退反查）。
+-- 另有特殊 key "~recent"：最近造词记录（造词模式只按 ` 时列出、= 删除）。
 --
 -- 调试用 .custom 切到 txt 即可手改数据。
 
@@ -26,6 +27,7 @@ M.ready = false
 M.users = 0
 M.backend = "leveldb"
 M.displace = true   -- `-` 上调时被顶掉的候选是否顺延（flow_order/displace）
+M.recent_max = 20   -- 最近造词记录上限（flow_order/recent_max）
 M.name = nil
 M.path = nil   -- txt 后端文件
 M.db = nil     -- leveldb 后端
@@ -161,6 +163,10 @@ function M.init(env)
         displace = true
     end
     M.displace = displace
+    local rmax = cfg:get_int("flow_order/recent_max")
+    if rmax and rmax > 0 then
+        M.recent_max = rmax
+    end
     if backend == "tabledb" then
         -- plain_userdb 不适合做通用 KV，退回 txt
         log.warning("flow_order: tabledb unsupported, fallback to txt")
@@ -272,10 +278,11 @@ function M.remove(key, text)
     save_key(key)
 end
 
--- 反查删除（造词用）：把 text 从**所有** key 里删掉，返回删掉的条数。
--- leveldb 本身没有反向索引，但 init 时已经把全部 pin 读进了内存
--- （M.order: key -> {词...}），所以反查就是扫一遍内存表；受影响的 key
--- 逐个写回后端（db 单键写 / txt 整文件重写），不需要额外维护索引。
+-- 反查删除（造词用）：把 text 从**所有** key 里删掉（含最近造词记录），
+-- 返回删掉的条数。leveldb 本身没有反向索引，但 init 时已经把全部 pin
+-- 读进了内存（M.order: key -> {词...}），所以反查就是扫一遍内存表；
+-- 受影响的 key 逐个写回后端（db 单键写 / txt 整文件重写），不需要额外
+-- 维护索引。
 function M.remove_word(text)
     if not text or text == "" then
         return 0
@@ -311,6 +318,46 @@ function M.remove_word(text)
         end
     end
     return removed
+end
+
+-- ---------------- 最近造词（造词模式只按 ` 时列出、= 删除） ----------------
+
+local RECENT_KEY = "~recent"
+
+-- 记一条最近造词：去重后放最前，截到 recent_max
+function M.touch_recent(text)
+    if not text or text == "" then
+        return
+    end
+    local list = M.order[RECENT_KEY]
+    if not list then
+        list = {}
+        M.order[RECENT_KEY] = list
+    end
+    for i = #list, 1, -1 do
+        if list[i] == text then
+            table.remove(list, i)
+        end
+    end
+    table.insert(list, 1, text)
+    for i = #list, M.recent_max + 1, -1 do
+        table.remove(list, i)
+    end
+    save_key(RECENT_KEY)
+end
+
+-- 最近造词（最多 limit 条，默认全部）
+function M.recent(limit)
+    local list = M.order[RECENT_KEY]
+    if not list then
+        return {}
+    end
+    limit = limit or #list
+    local out = {}
+    for i = 1, math.min(limit, #list) do
+        out[i] = list[i]
+    end
+    return out
 end
 
 -- 把 text 往下移一位；已在末位则移出手动列表

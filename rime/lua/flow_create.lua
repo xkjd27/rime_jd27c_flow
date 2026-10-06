@@ -11,7 +11,12 @@
 --     （数字只用于选是哪个候选）。入库时音码归位到方案简码（`jm;yl 拼
 --     出来的简直了 → j;l），形码一律重填成这个词需要的完整形码；退出
 --     造词并还原成普通输入（保留形码），之后继续按 `-` 一级一级剥形码调权；
---   * `=` 无效；Esc，或退格到空输入退出。
+--   * `=`：删除。把当前 context 里的词（选中的候选 / 已确认的组合词）
+--     从 order 里整条删掉（**所有档位** + 最近造词记录），并清回 `` ` ``
+--     状态；不退出造词，方便在最近造词列表里连着删；
+--   * 只按了 `` ` ``（还没打码）时，候选里列出**最近的造词**（最多 8 条，
+--     注释「最近」），上下键/数字选中后按 `=` 删；
+--   * Esc，或退格到空输入退出造词。
 --
 -- 入库即 flow_order 里的一条 pin，不再单独维护 words 库：造出来的词一定
 -- 是当前码上的现成候选，pin 住它就能到首位。
@@ -121,6 +126,7 @@ function M.store(ctx)
         -- （手动调序的 displace 不做这件事，它只管被顶掉的别的词）
         order.remove_word(phrase)
         order.insert(sound .. "|" .. shape, phrase, 1)
+        order.touch_recent(phrase)
     end
     ctx:set_property(PROP, "")
     restore(ctx)
@@ -133,6 +139,19 @@ function M.store(ctx)
     else
         ctx:set_property("flow_shape", "")
     end
+end
+
+-- `=`：删除。把当前 context 里的词（选中的候选 / 已确认的组合词）从
+-- order 里整条删掉（所有档位 + 最近记录），然后清回 `` ` `` 状态；
+-- 不退出造词，方便在「只有 `」的最近造词列表里连着删。
+function M.delete(ctx)
+    local word = M.strip_marker(ctx:get_commit_text())
+    if word == "" then
+        return
+    end
+    order.remove_word(word)
+    ctx:clear()
+    ctx:push_input("`")
 end
 
 return M
