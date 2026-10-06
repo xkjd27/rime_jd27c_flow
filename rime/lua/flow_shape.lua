@@ -377,6 +377,11 @@ local function processor(key_event, env)
             end
             return 1
         end
+        -- 组合中但没有候选（形码已超过词的全码、码还没打完等）：吞掉按键，
+        -- 否则 express_editor 会把原文连 `-` / `=` 一起上屏（hjn= 这种）
+        if ctx:is_composing() then
+            return 1
+        end
         return 2
     end
 
