@@ -6,7 +6,7 @@
 # 只保留键道27C 的音码（声母 + 韵母，一字两码），
 # 词组用键道原版简码，逐词上屏（四码 / 形码顶功）。
 # 码表由 tools/build_flow_dict.py 生成。
-# 引擎仍用 script_translator：笔码连打与兜底候选需要它的整句合成。
+# 引擎用 table_translator 按码表逐词匹配（enable_sentence: false），无整句合成。
 
 schema:
   schema_id: xkjd27c_flow
@@ -50,7 +50,6 @@ engine:
   translators:
     - punct_translator
     - table_translator
-    - table_translator@shape_sentence
   filters:
     - lua_filter@*flow_filter
     - simplifier@jffh
@@ -70,17 +69,6 @@ translator:
   enable_completion: false
   enable_encoder: false
   enable_charset_filter: false
-
-# 纯笔码（只有 aeiov）：单独开一个允许合成的翻译器，保住「连打」
-# （ae → 又得、aiv → 阝有）；普通输入不做任何合成。
-shape_sentence:
-  __include: translator
-  tags: [ shape ]
-  enable_sentence: true
-
-recognizer:
-  patterns:
-    shape: "^[aeiov]+$"
 
 # 手动调序存储后端：leveldb（默认）| txt（纯文本，方便手改/调试）
 # 用户可在 xkjd27c_flow.custom.yaml 里 patch：flow_order/backend: txt
