@@ -73,8 +73,13 @@ flow_order:
   name: xkjd27c_flow.order
 
 # 候选提示：非首选候选右侧显示「让它成为首选还需要按的键」
-# （声码未输完补声码，输完则给形码）；设为 false 关闭
-flow_hint: true
+# （声码未输完补声码，输完则给形码；候选按这个键数稳定排序）
+flow_hint:
+  # 笔码（形码）提示
+  shape: true
+  # 不可顶功提示（⛔️）
+  topup: true
+# 全关用 flow_hint: false（关了提示也就不排序）
 
 jffh:
   opencc_config: s2t.json

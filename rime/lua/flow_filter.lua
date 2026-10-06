@@ -15,7 +15,9 @@ local create = require("flow_create")
 local secondary = require("flow_secondary")
 
 local ready = false
-local hint_on = true
+local hint_on = true       -- 总开关（声码提示 + 候选排序）
+local hint_shape = true    -- 笔码（形码）提示：flow_hint/shape
+local hint_topup = true    -- 不可顶功提示（⛔️）：flow_hint/topup
 -- 自动前进状态：key = 音码串 .. "|" .. 形码前缀 -> 当时的首选
 local top_cache = {}
 
@@ -162,14 +164,14 @@ local function shape_hint(cand, input, shape, base, excluded, current_top, ctx)
     return nil
 end
 
--- 给候选写上提示：优先补声码（先音后形），声码已完则给形码；
--- 返回提示键串（= 还差几键），供候选排序用
+-- 给候选写上提示：优先补声码（先音后形），声码已完则给形码（可用
+-- flow_hint/shape 关）；返回提示键串（= 还差几键），供候选排序用
 local function apply_hint(cand, input, shape, base, excluded, current_top, ctx)
     if not hint_on or cand.text == current_top then
         return nil
     end
     local hint = codes.next_keys(cand.text, input)
-    if not hint then
+    if not hint and hint_shape then
         hint = shape_hint(cand, input, shape, base, excluded, current_top, ctx)
     end
     if hint and hint ~= "" then
@@ -345,7 +347,7 @@ local function filter(translation, env)
                 -- 只有 `：在标点的〔半角〕/〔全角〕提示后补「造词模式」
                 cand.comment = (cand.comment or "") .. "造词模式"
             end
-            if i == 1 and no_topup then
+            if i == 1 and hint_on and hint_topup and no_topup then
                 cand.comment = "⛔️" .. (cand.comment or "")
             end
             if i == 1 then
@@ -382,9 +384,25 @@ local function init(env)
     order.init(env)
     codes.init(env)
     ready = shapes.init(env)
-    local h = env.engine.schema.config:get_bool("flow_hint")
-    if h ~= nil then
+    local cfg = env.engine.schema.config
+    -- flow_hint 支持两种写法：
+    --   flow_hint: false                -- 总开关（提示 + 排序都关）
+    --   flow_hint:\n    shape: false   -- 笔码提示
+    --                topup: false   -- 不可顶功提示（⛔️）
+    -- 是 map 时 get_bool("flow_hint") 不可靠，只要子项出现过就当总开关是开
+    local hs = cfg:get_bool("flow_hint/shape")
+    local ht = cfg:get_bool("flow_hint/topup")
+    local h = cfg:get_bool("flow_hint")
+    if hs ~= nil or ht ~= nil then
+        hint_on = true
+    elseif h ~= nil then
         hint_on = h
+    end
+    if hs ~= nil then
+        hint_shape = hs
+    end
+    if ht ~= nil then
+        hint_topup = ht
     end
 end
 
