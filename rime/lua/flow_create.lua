@@ -5,10 +5,12 @@
 --   * 普通输入，但禁用顶功/四码自动上屏（临时关掉 _auto_commit）；
 --   * 候选提示照常；空格/数字用于分词选择（确认当前段 / 选第 N 个候选），
 --     都不上屏；非法内容（再按 `、没候选时的空格、标点）原样上屏退出；
---   * `-`：把当前候选 pin 在「音码|形码」首位（造词全码，如 其实我觉得 →
---     quwd + voeoeeoi）；如果输入是顶功前进后的拼接全码（`jm;yl），
---     音码归位到方案简码（简直了 → j;l）；退出造词并还原成普通输入
---     （保留形码）；之后继续按 `-` 一级一级剥形码调整权重；
+--   * `-`：把**已确认**的词 pin 在「音码|形码」首位（造词全码，如 其实我觉得 →
+--     quwd + voeoeeoi）；如果还有没确认的段（正在打 / 还在选 / 打错没
+--     候选）则吞掉——用户还没把词组打完，不猜候选。最后一段用空格确认
+--     （数字只用于选是哪个候选）。入库时音码归位到方案简码（`jm;yl 拼
+--     出来的简直了 → j;l），形码一律重填成这个词需要的完整形码；退出
+--     造词并还原成普通输入（保留形码），之后继续按 `-` 一级一级剥形码调权；
 --   * `=` 无效；Esc，或退格到空输入退出。
 --
 -- 入库即 flow_order 里的一条 pin，不再单独维护 words 库：造出来的词一定
@@ -92,35 +94,27 @@ function M.tick(ctx)
     end
 end
 
--- `-`：把当前候选 pin 在「音码|形码」首位（造词全码，如 其实我觉得 →
--- quwd + voeoeeoi）；退出造词模式并还原成普通输入（保留形码），
--- 之后可以继续按 `-` 一格一格剥形码，把词调到想要的级别/权重。
+-- `-`：把已经确认的词 pin 在「音码|形码」首位（造词全码，如 其实我觉得 →
+-- quwd + voeoeeoi）；还有没确认的段（正在打/还在选/打错）时直接吞掉：
+-- 还没打完，不猜候选。确认最后一段用空格（数字只用于选候选）。
+-- 退出造词模式并还原成普通输入（保留形码），之后可以继续按 `-`
+-- 一格一格剥形码，把词调到想要的级别/权重。
 function M.store(ctx)
+    -- 当前段还有没确认的输入：有候选（还在选）或没候选（打错了）都吞掉
     local seg = ctx.composition and ctx.composition:back()
-    local shape = ctx:get_property("flow_shape") or ""
-    local had_shape = shape ~= ""
-    -- 形码把当前段筛空了（非法/多余的笔键）：按用户规则全部删掉重算，
-    -- 拿回这一段原本的候选（`jm;yl 打完再乱按 iiii 时回到「了」）
-    if had_shape and seg and not ctx:has_menu() and (seg._end - seg.start) > 0 then
-        shape = ""
-        ctx:set_property("flow_shape", "")
-        ctx:refresh_non_confirmed_composition()
-        seg = ctx.composition and ctx.composition:back()
-    end
-    -- 当前段还是没有候选的原始输入，不当词存
-    if seg and not ctx:has_menu() and (seg._end - seg.start) > 0 then
+    if seg and (seg._end - seg.start) > 0 then
         return
     end
     local sound = M.strip_marker(ctx.input)
     local phrase = M.strip_marker(ctx:get_commit_text())
     local ok = phrase ~= "" and sound ~= ""
+    local shape = ""
     if ok then
         -- 音码归位到方案简码（顶功前进拼出来的全码 → 方案码）
         if not codes.is_scheme_code(phrase, sound) then
             sound = codes.scheme_code(phrase) or sound
         end
-        -- 形码删掉重填：手打的笔键只用于筛选，全码一律用这个词需要的
-        -- 完整形码（不管是没打还是打了一半/乱打）
+        -- 形码删掉重填：全码一律用这个词需要的完整形码（没打也会补）
         shape = shapes.expected(phrase) or ""
         order.insert(sound .. "|" .. shape, phrase, 1)
     end
