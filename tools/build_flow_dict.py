@@ -395,29 +395,30 @@ def word_code(reading, abbrev_weight, length_weight=1.0):
     """reading = [(全码, 声母码)...] -> (code, 权重系数) 或 None。
 
     键道原版词组编码：
-      n == 2  音音全码（如 我们 = wu mk）
-      n == 3  3 个首字母（如 为什么 = w u m）
-      n == 4  4 个首字母（如 万里长城 = w l y y）
-      n >= 5  前 3 个首字母 + 末字首字母（如 吃一堑长一智 = y f q ;）
+      n == 2  音音全码（如 我们 = wumk）
+      n == 3  3 个首字母（如 为什么 = wum）
+      n == 4  4 个首字母（如 万里长城 = wlyy）
+      n >= 5  前 3 个首字母 + 末字首字母（如 吃一堑长一智 = yfq;）
 
-    音节之间用空格分隔（Rime 按空格切分音节）。
+    码连写不分音节（table_translator 直接按整串匹配；
+    脚本翻译器时代的空格分隔已不需要）。
     length_weight：词组按字数降权，每多 1 字乘一次（n=2 为基准）。
     """
     n = len(reading)
     if n == 2:
-        return (' '.join(f for f, _ in reading), 1.0)
+        return (''.join(f for f, _ in reading), 1.0)
     scale = abbrev_weight * length_weight ** (n - 2)
     if n in (3, 4):
         initials = [i for _, i in reading]
         if not all(initials):
             return None
-        return (' '.join(initials), scale)
+        return (''.join(initials), scale)
     if n >= 5:
         head = [i for _, i in reading[:3]]
         tail = reading[-1][1]
         if not all(head) or not tail:
             return None
-        return (' '.join(head + [tail]), scale)
+        return (''.join(head + [tail]), scale)
     return None
 
 

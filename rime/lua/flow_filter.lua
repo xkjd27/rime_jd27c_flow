@@ -215,6 +215,10 @@ local function filter(translation, env)
     if is_shape_only_input(input) then
         top_cache[key] = chosen[1] and chosen[1].text or nil
         for _, cand in ipairs(chosen) do
+            -- table_translator 会给合成候选加 ☯ 注释，去掉（纯笔码连打保持干净）
+            if cand.comment and cand.comment:find("☯") then
+                cand.comment = ""
+            end
             yield(cand)
         end
         return
