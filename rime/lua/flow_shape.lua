@@ -26,7 +26,7 @@
 -- 行为：
 --   * 形码键      -> 输入串只有 aeiov 时进入输入串，由笔码表（xkjd27c_flow.bima）
 --                    匹配（纯笔码）；否则追加到 flow_shape（最长 12 键），刷新候选
---   * 回车        -> 没有候选时原样上屏输入（输入 + 形码）
+--   * 回车        -> 原样上屏输入（输入 + 形码）
 --   * BackSpace   -> flow_shape 非空则删掉最后一个形码
 --   * `-` / `=`   -> 手动调序（见上）
 --   * 音码键      -> 若 flow_shape 非空（顶码）或音码已达 4 键（四码）则先上屏
@@ -213,11 +213,14 @@ local function processor(key_event, env)
         return 2
     end
 
-    -- 回车：没有候选时上屏原始字母（纯笔码、无匹配的自定义输入）
+    -- 回车：原样上屏输入（含形码），不走 express_editor 的原始输入
+    -- （后者只提交 ctx.input，会丢掉 flow_shape 里的形码）
     if code == XK_RETURN then
-        if ctx:is_composing() and not ctx:get_selected_candidate() then
+        if ctx:is_composing() then
             local text = ctx.input .. get_shape(ctx)
             if text ~= "" then
+                -- engine:commit_text 不会触发 commit_notifier，手动清形码状态
+                ctx:set_property(PROP, "")
                 ctx:clear()
                 env.engine:commit_text(text)
                 return 1
