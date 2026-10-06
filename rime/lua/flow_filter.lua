@@ -68,14 +68,23 @@ end
 --   * 更短的音码前缀（无形码状态）
 local function collect_exclusions(input, shape)
     local excluded = {}
+    -- 更短一级的首选：该级有手动顺序（pin）就以 pin 的首位为准——
+    -- pin 是刚改过的（- / =），top_cache 里存的可能是改之前的旧首选
+    local function top_at(key)
+        local wanted = order.get(key)
+        if wanted and #wanted > 0 then
+            return wanted[1]
+        end
+        return top_cache[key]
+    end
     for i = 0, #shape - 1 do
-        local t = top_cache[input .. "|" .. shape:sub(1, i)]
+        local t = top_at(input .. "|" .. shape:sub(1, i))
         if t then
             excluded[t] = true
         end
     end
     for i = 1, #input - 1 do
-        local t = top_cache[input:sub(1, i) .. "|"]
+        local t = top_at(input:sub(1, i) .. "|")
         if t then
             excluded[t] = true
         end
@@ -367,37 +376,39 @@ local function filter(translation, env)
 
     local excluded = collect_exclusions(code_text, shape)
 
-    -- 该 key 有手动顺序：不再做自动前进
+    -- 该 key 有手动顺序：pin 的词照常显示（不被自动前进排除），
+    -- 其余候选仍按自动前进排除（否则 pin 一下会把这些候选又放出来）
     local wanted = order.get(key)
     local final, current_top
-    if wanted and #wanted > 0 then
-        final = chosen
-        current_top = chosen[1].text
-    else
-        local has_excluded = next(excluded) ~= nil
-        final = {}
-        local full_code = {}   -- 全码命中但被自动前进排除的，低优先级兜底
-        for _, cand in ipairs(chosen) do
-            if has_excluded and excluded[cand.text] then
-                -- 音码已完整 + 形码刚好是完整形码 = 命中全码：无视 auto
-                -- advance，补在候选最后（组内保持 chosen 顺序：自造词在前，
-                -- 其余按权重序）；纯形码输入不算
-                if shape ~= "" and shapes.expected(cand.text) == shape and
-                        codes.next_keys(cand.text, code_text) == nil then
-                    full_code[#full_code + 1] = cand
-                end
-            else
-                final[#final + 1] = cand
-            end
+    local pinned = {}
+    if wanted then
+        for _, t in ipairs(wanted) do
+            pinned[t] = true
         end
-        for _, cand in ipairs(full_code) do
+    end
+    local has_excluded = next(excluded) ~= nil
+    final = {}
+    local full_code = {}   -- 全码命中但被自动前进排除的，低优先级兜底
+    for _, cand in ipairs(chosen) do
+        if has_excluded and excluded[cand.text] and not pinned[cand.text] then
+            -- 音码已完整 + 形码刚好是完整形码 = 命中全码：无视 auto
+            -- advance，补在候选最后（组内保持 chosen 顺序：自造词在前，
+            -- 其余按权重序）；纯形码输入不算
+            if shape ~= "" and shapes.expected(cand.text) == shape and
+                    codes.next_keys(cand.text, code_text) == nil then
+                full_code[#full_code + 1] = cand
+            end
+        else
             final[#final + 1] = cand
         end
-        if #final == 0 then  -- 全被排除则回退，避免空菜单
-            final = chosen
-        end
-        current_top = final[1].text
     end
+    for _, cand in ipairs(full_code) do
+        final[#final + 1] = cand
+    end
+    if #final == 0 then  -- 全被排除则回退，避免空菜单
+        final = chosen
+    end
+    current_top = final[1].text
 
     top_cache[key] = current_top
 
