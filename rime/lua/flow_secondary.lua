@@ -15,6 +15,10 @@ local order = require("flow_order")
 
 local M = {}
 
+-- 总开关：flow_secondary: false 时整块关掉（Tab 处理、次简候选、学习），
+-- 已经存下的 ~secondary 数据保留，重新打开就恢复。
+local enabled = true
+
 M.defaults = {
     -- 二重（单键声码）：吧b 打d 发f 嘿h 及j 啦l 嘛m 哪n 期q 挺t 实u 玩w 嗯x 重y 咱z
     b = "吧", d = "打", f = "发", h = "嘿", j = "及", l = "啦", m = "嘛",
@@ -23,8 +27,23 @@ M.defaults = {
     o = "识",
 }
 
--- 该码的次简；nil = 没有（用户显式取消、或表里没有）
+-- 读配置（由 flow_shape / flow_filter 的 init 调用）
+function M.init(env)
+    local v = env.engine.schema.config:get_bool("flow_secondary")
+    if v ~= nil then
+        enabled = v
+    end
+end
+
+function M.enabled()
+    return enabled
+end
+
+-- 该码的次简；nil = 没有（功能关掉 / 用户显式取消 / 表里没有）
 function M.get(code)
+    if not enabled then
+        return nil
+    end
     local override = order.get_secondary(code)
     if override ~= nil then
         if override == "" then
@@ -35,8 +54,11 @@ function M.get(code)
     return M.defaults[code]
 end
 
--- 记一条（Tab 学习 / 用户覆盖）
+-- 记一条（Tab 学习 / 用户覆盖；功能关掉时不写）
 function M.set(code, text)
+    if not enabled then
+        return
+    end
     order.set_secondary(code, text)
 end
 

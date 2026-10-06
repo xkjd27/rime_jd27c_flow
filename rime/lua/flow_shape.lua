@@ -24,7 +24,7 @@
 --
 -- 行为：
 --   * 形码键      -> 输入串只有 aeiov 时进入输入串，由纯形码表（xkjd27c_flow.shape）
---                    匹配（纯笔码）；否则追加到 flow_shape（最长 40 键），刷新候选
+--                    匹配（纯笔码）；否则追加到 flow_shape，刷新候选
 --   * 回车        -> 原样上屏输入（输入 + 形码）
 --   * BackSpace   -> flow_shape 非空则删掉最后一个形码
 --   * `-` / `=`   -> 手动调序（见上）；造词模式下 `-` 入库退出、`=` 删除
@@ -40,7 +40,6 @@ local secondary = require("flow_secondary")
 
 local SHAPE_KEYS = { a = true, e = true, i = true, o = true, v = true }
 local PROP = "flow_shape"
-local MAX_SHAPE = 40
 local XK_BACKSPACE = 0xff08
 local XK_TAB = 0xff09
 local XK_RETURN = 0xff0d
@@ -75,12 +74,10 @@ end
 -- 把 text 放到 input|shape 的首位；目标位若已被其他候选占据，
 -- 被顶掉的候选沿它自己的形码串顺延到下一级，递归直到有空位；
 -- 已到完整形码仍无空位则丢弃该 pin（回归自然排序）。
+-- 递归深度由候选自己的期望形码长度兜底（每层形码 +1，不会死循环）。
 -- syl 非空时表示这是一次音码削减，完整音节会随 pin 保存。
 local function place(text, input, shape, syl)
-    local function put(t, s, sy, depth)
-        if depth > MAX_SHAPE + 1 then
-            return
-        end
+    local function put(t, s, sy)
         local key = input .. "|" .. s
         local list = order.get(key)
         local occupant = list and list[1]
@@ -96,11 +93,11 @@ local function place(text, input, shape, syl)
         if occupant then
             local exp = shapes.expected(occupant)
             if exp and #s < #exp and exp:sub(1, #s) == s then
-                put(occupant, exp:sub(1, #s + 1), occ_syl, depth + 1)
+                put(occupant, exp:sub(1, #s + 1), occ_syl)
             end
         end
     end
-    put(text, shape, syl, 1)
+    put(text, shape, syl)
 end
 
 -- `-` 降档（上调）：把候选从当前级别移走，pin 到更短一级；
@@ -222,7 +219,7 @@ local function processor(key_event, env)
 
     -- Tab：次简。当前码有次简 → 上屏次简；否则上屏当前候选，并把它
     -- 学成该码首键的次简（如 `kffy` 的可以 → `k` 的次简）
-    if code == XK_TAB and not is_create then
+    if code == XK_TAB and not is_create and secondary.enabled() then
         if ctx:is_composing() and ctx:has_menu() then
             local raw = ctx.input .. get_shape(ctx)
             local want = secondary.get(raw)
@@ -329,10 +326,7 @@ local function processor(key_event, env)
             if ctx.input == "" or is_shape_only(ctx.input) then
                 return 2
             end
-            local s = get_shape(ctx)
-            if #s < MAX_SHAPE then
-                set_shape(ctx, s .. key)
-            end
+            set_shape(ctx, get_shape(ctx) .. key)
             return 1
         end
         return 2
@@ -374,6 +368,7 @@ local function init(env)
     order.init(env)
     shapes.init(env)
     codes.init(env)
+    secondary.init(env)
     env.flow_shape_conn = env.engine.context.commit_notifier:connect(
         function(ctx)
             ctx:set_property(PROP, "")
