@@ -18,27 +18,43 @@ local words = require("flow_words")
 local M = {}
 
 local PROP = "flow_create"
-local TRIGGERS = { [0x60] = true, [0x7e] = true }  -- ` / ~
+-- 造词模式的开始标记；这些键从空输入进入造词，并原样放进输入串
+-- （用户看得到当前状态，`-` 入库时去掉）
+local TRIGGERS = { [0x60] = "`", [0x7e] = "~" }
+-- 可能出现在输入/ composition 开头的标记（含全角）
+local MARKERS = { "`", "~", "｀", "～" }
 
 local on_state = false
 local saved_auto = true
 local restore_pending = false
 
 function M.is_trigger(code)
-    return TRIGGERS[code] == true
+    return TRIGGERS[code]
+end
+
+-- 去掉开头的造词标记（` / ~ / ｀ / ～），去掉一个
+function M.strip_marker(s)
+    for _, p in ipairs(MARKERS) do
+        if s:sub(1, #p) == p then
+            return s:sub(#p + 1)
+        end
+    end
+    return s
 end
 
 function M.active(ctx)
     return on_state and ctx:get_property(PROP) == "1"
 end
 
-function M.enter(ctx)
+function M.enter(ctx, mark)
     on_state = true
     restore_pending = false
     ctx:set_property(PROP, "1")
     local saved = ctx:get_option("_auto_commit")
     saved_auto = (saved == nil) and true or saved
     ctx:set_option("_auto_commit", false)
+    -- 标记进入输入串，组句开头就能看到造词状态
+    ctx:push_input(mark or "`")
 end
 
 local function restore(ctx)
@@ -80,11 +96,11 @@ function M.store(ctx)
         -- 当前段是没有候选的原始输入，不当词存
         return
     end
-    local phrase = ctx:get_commit_text()
-    local input = ctx.input
+    local code_input = M.strip_marker(ctx.input)
+    local phrase = M.strip_marker(ctx:get_commit_text())
     local key
-    if phrase ~= "" then
-        key = codes.full_code(phrase, input) or input
+    if phrase ~= "" and code_input ~= "" then
+        key = codes.full_code(phrase, code_input) or code_input
     end
     if key and key ~= "" then
         words.add(key, phrase)

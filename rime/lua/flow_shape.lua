@@ -202,13 +202,14 @@ local function processor(key_event, env)
     create.tick(ctx)
     local is_create = create.active(ctx)
 
-    -- ` / ~：从空输入进入造词模式
-    if create.is_trigger(code) then
+    -- ` / ~：从空输入进入造词模式（标记会进输入串）
+    local mark = create.is_trigger(code)
+    if mark then
         if is_create then
             return 1
         end
         if not ctx:is_composing() then
-            create.enter(ctx)
+            create.enter(ctx, mark)
             return 1
         end
         return 2
@@ -269,7 +270,7 @@ local function processor(key_event, env)
     -- （后者只提交 ctx.input，会丢掉 flow_shape 里的形码）
     if code == XK_RETURN then
         if ctx:is_composing() then
-            local text = ctx.input .. get_shape(ctx)
+            local text = create.strip_marker(ctx.input) .. get_shape(ctx)
             if text ~= "" then
                 -- engine:commit_text 不会触发 commit_notifier，手动清形码状态
                 ctx:set_property(PROP, "")

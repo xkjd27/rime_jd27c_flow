@@ -11,6 +11,7 @@ local order = require("flow_order")
 local shapes = require("flow_shapes")
 local codes = require("flow_codes")
 local words = require("flow_words")
+local create = require("flow_create")
 
 local ready = false
 local hint_on = true
@@ -264,13 +265,14 @@ local function filter(translation, env)
 
     -- 造词模式：不计算提示；首选上显示整条 composition 的全码
     if creating and final[1] then
-        local ct = ctx:get_commit_text()
+        local code_input = create.strip_marker(input)
+        local ct = create.strip_marker(ctx:get_commit_text())
         local seg_raw = input:sub(span_start + 1, span_end)
         local phrase = ct
         if seg_raw ~= "" and ct:sub(-#seg_raw) == seg_raw then
             phrase = ct:sub(1, #ct - #seg_raw) .. final[1].text
         end
-        local full = codes.full_code(phrase, input)
+        local full = codes.full_code(phrase, code_input)
         final[1].comment = full and ("全码 " .. full) or "全码 ?"
         for _, cand in ipairs(final) do
             annotate(cand, shape)
