@@ -108,16 +108,26 @@
 
    ```
    xkjd27c_flow.schema.yaml
-   xkjd27c_flow.dict.yaml
-   xkjd27c_flow.danzi.dict.yaml
-   xkjd27c_flow.cizu.dict.yaml
-   xkjd27c_flow.shape.txt      # 形码表（ZiDB 笔形）
-   lua/flow_filter.lua         # 节奏校验 + 形码筛选 + 自动前进 + 候选提示
-   lua/flow_shape.lua          # 形码键处理 + 顶功
-   lua/flow_shapes.lua         # 期望形码串
-   lua/flow_order.lua          # 手动调序存储（leveldb/txt）
-   lua/flow_codes.lua          # 候选音码推导（reverse db，用于提示）
+   xkjd27c_flow.ice.dict.yaml    # 默认词库（rime-ice，88 万词）
+   xkjd27c_flow.simp.dict.yaml   # 小词库（pinyin_simp，4.8 万词）
+   xkjd27c_flow.danzi.dict.yaml  # 单字（两个变体共用）
+   xkjd27c_flow.shape.txt        # 形码表（ZiDB 笔形）
+   lua/flow_filter.lua           # 节奏校验 + 形码筛选 + 自动前进 + 候选提示
+   lua/flow_shape.lua            # 形码键处理 + 顶功
+   lua/flow_shapes.lua           # 期望形码串
+   lua/flow_order.lua            # 手动调序存储（leveldb/txt）
+   lua/flow_codes.lua            # 候选音码推导（reverse db，用于提示）
    ```
+
+   默认用 `.ice`（rime-ice，词多、现代）。想换成 `.simp`（pinyin_simp，小、Rime 自带）
+   就在 `xkjd27c_flow.custom.yaml` 里 patch：
+
+   ```yaml
+   patch:
+     translator/dictionary: xkjd27c_flow.simp
+   ```
+
+   调序数据两个变体共用（`flow_order/name: xkjd27c_flow.order`），切词库不丢 pin。
 
 2. 在 `default.custom.yaml`（没有就新建）里加入方案，例如：
 
@@ -204,25 +214,26 @@
 
 ## 码表生成
 
-`rime/` 里已经生成好码表（默认基于 `pinyin_simp`），直接用即可。
-需要重新生成时：
+`rime/` 里已经生成好两份词库，直接用即可：
+
+* `xkjd27c_flow.ice.dict.yaml`：默认词库（rime-ice，约 88 万词）；
+* `xkjd27c_flow.simp.dict.yaml`：小词库（pinyin_simp，约 4.8 万词）；
+* `xkjd27c_flow.danzi.dict.yaml`：单字（两个变体共用，import）；
+* `xkjd27c_flow.shape.txt`：形码表。
+
+需要重新生成时（**一次生成两个变体**）：
 
 ```
+git clone --depth 1 https://github.com/iDvel/rime-ice /tmp/rime-ice
 python3 tools/build_flow_dict.py
 ```
 
 数据源：
 
-* `../rime_jd27c`：单字表 `ZiDB`（键道定音、音码）；
-* `/usr/share/rime-data/pinyin_simp.dict.yaml`：默认拼音词库
-  （Rime 自带，约 4.8 万词，带词频）；
-* 可选：rime-ice `cn_dicts`（约 88 万词，简体、现代，带词级拼音）：
-
-  ```
-  git clone --depth 1 https://github.com/iDvel/rime-ice /tmp/rime-ice
-  python3 tools/build_flow_dict.py --rime-ice /tmp/rime-ice \
-      --no-pinyin-simp-words --out rime-ice/
-  ```
+* `../rime_jd27c`：单字表 `ZiDB`（键道定音、音码、笔形）；
+* `/usr/share/rime-data/pinyin_simp.dict.yaml`：`simp` 词库；
+* `/tmp/rime-ice/cn_dicts` 的 8105 + base/ext/others：`ice` 词库
+  （目录不存在时只重新生成 `simp`）。
 
 单字权重按**读音**取（如 `见 jian=3460998 / 见 xian=34609`）；词库没给的
 读音按键道短码长度衰减兜底（每长一码低一个数量级），避免多音字的罕见
@@ -233,10 +244,10 @@ python3 tools/build_flow_dict.py
 ```
 --source PATH          rime_jd27c 仓库路径
 --pinyin-simp PATH     pinyin_simp.dict.yaml 路径
---words PATH           追加标准拼音词库（词/拼音/权重），可重复
---rime-ice DIR         引入 rime-ice 的 8105 + base/ext/others
+--words PATH           追加标准拼音词库（词/拼音/权重），可重复；两个变体都加
+--rime-ice DIR         rime-ice 仓库路径（默认 /tmp/rime-ice）
 --rime-ice-tencent     再引入 rime-ice tencent（无拼音，自动注音）
---abbrev-weight FLOAT  节奏码词频系数（默认 0.5）
+--abbrev-weight FLOAT  节奏码词频系数（默认 1.0）
 --initial-weight FLOAT 1 键声母码词频系数（默认 1.0）
 --weight-scale FLOAT   全局词频缩放（默认 1）
 --out PATH             输出目录（默认 rime/）
@@ -252,8 +263,8 @@ python3 tools/build_flow_dict.py
   * 5 字以上：前 3 首 + 末 1 首（吃一堑长一智 → `y f q ;`）。
 * 码表 code 用**空格分隔音节**，prism 音节表很小（几百项），
   整词由音节序列组成；不要写成长串，否则大数据量时 prism 会爆炸。
-* 词典头 `use_preset_vocabulary: false`：不引入八股文，词库完全由
-  `--words` / `--rime-ice` 决定。
+* 两份词库（`.ice` / `.simp`）都 import 共用单字表 `xkjd27c_flow.danzi`；
+  切换只需改 `translator/dictionary`。
 * 形码不进码表：另生成 `xkjd27c_flow.shape.txt`（ZiDB 前 4 笔形，
   8 千余字），运行时由 Lua 用来筛选候选。
 
@@ -291,15 +302,17 @@ printf 'patch:\n  schema_list:\n    - schema: xkjd27c_flow\n' \
 ## 目录
 
 ```
-rime/     Rime 方案、码表、形码表（默认 pinyin_simp 生成）
+rime/     Rime 方案、词库（.ice 默认 / .simp）、单字表、形码表
 rime/lua/ 节奏校验、形码筛选 / 顶功（Lua）
 tools/    码表生成脚本、librime 测试器
 docs/     布局图、设计记录（docs/cadence.md）
 ```
 
-## 致谢
+## 致谢与许可
 
 * 星空键道原作者：吅吅大山（[键道6官网](https://xkinput.gitee.io/)）
 * 布局与单字读音来自 [rime_jd27c](https://github.com/TsFreddie/rime_jd27c)
-* 词频/词库来自 Rime 自带的 `pinyin_simp`，可选
-  [rime-ice](https://github.com/iDvel/rime-ice)
+* 词库 `xkjd27c_flow.ice` 派生自 [rime-ice](https://github.com/iDvel/rime-ice)
+  （GPLv3），`xkjd27c_flow.simp` 派生自 Rime 自带的 `pinyin_simp`。
+
+因为分发了 rime-ice 派生词库，本方案整体采用 **GPL-3.0**（见 `LICENSE`）。

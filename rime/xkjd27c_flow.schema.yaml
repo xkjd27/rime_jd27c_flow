@@ -59,7 +59,9 @@ speller:
   auto_select: false
 
 translator:
-  dictionary: xkjd27c_flow
+  # 词库变体：.ice（rime-ice，默认）| .simp（pinyin_simp）
+  # 切到 simp：xkjd27c_flow.custom.yaml 里 patch 本项
+  dictionary: xkjd27c_flow.ice
   enable_charset_filter: false
   enable_completion: true
   enable_user_dict: false
@@ -70,6 +72,8 @@ translator:
 # 用户可在 xkjd27c_flow.custom.yaml 里 patch：flow_order/backend: txt
 flow_order:
   backend: leveldb
+  # 两个词库变体共用一份调序数据（切词库不丢 pin）
+  name: xkjd27c_flow.order
   # `-` 上调时，若目标级别已有 pin，被顶掉的候选是否沿它自己的
   # 形码串顺延到下一级（继续冲突则继续顺延），而不是回到自然排序。
   displace: true

@@ -473,31 +473,19 @@ use_preset_vocabulary: false
 ...
 """
 
-CIZU_HEADER = """\
-# 键道27C Flow 词组码表
-# 由 tools/build_flow_dict.py 自动生成，请勿手工修改
-# 2 字：音音全码；3/4 字：首字母；5 字以上：前三首 + 末一首
----
-name: xkjd27c_flow.cizu
-version: "1.2"
-sort: by_weight
-use_preset_vocabulary: false
-...
-"""
-
-MAIN_DICT = """\
-# 键道27C Flow 码表（音码）
-# 由 tools/build_flow_dict.py 自动生成，请勿手工修改
----
-name: xkjd27c_flow
-version: "1.1"
-sort: by_weight
-use_preset_vocabulary: false
-import_tables:
-  - xkjd27c_flow.danzi
-  - xkjd27c_flow.cizu
-...
-"""
+def variant_header(variant, note):
+    return (
+        '# 键道27C Flow 词库（%s）\n'
+        '# 由 tools/build_flow_dict.py 自动生成，请勿手工修改\n'
+        '# 2 字：音音全码；3/4 字：首字母；5 字以上：前三首 + 末一首\n'
+        '---\n'
+        'name: xkjd27c_flow.%s\n'
+        'version: "1.2"\n'
+        'sort: by_weight\n'
+        'use_preset_vocabulary: false\n'
+        'import_tables:\n'
+        '  - xkjd27c_flow.danzi\n'
+        '...\n' % (note, variant))
 
 
 def write_dict(path, header, entries, scale=1.0):
@@ -552,12 +540,12 @@ def main():
     parser.add_argument('--pinyin-simp', default=None,
                         help='pinyin_simp.dict.yaml 路径')
     parser.add_argument('--no-pinyin-simp-words', action='store_true',
-                        help='只把 pinyin_simp 当字频源，不生成词组')
+                        help='（已废弃，忽略）')
     parser.add_argument('--words', action='append', default=[],
                         metavar='PATH',
                         help='额外标准拼音词库（词/拼音/权重），可重复')
-    parser.add_argument('--rime-ice', default=None, metavar='DIR',
-                        help='rime-ice 仓库路径，引入 8105 + base/ext/others')
+    parser.add_argument('--rime-ice', default='/tmp/rime-ice', metavar='DIR',
+                        help='rime-ice 仓库路径（默认 %(default)s；不存在则只生成 simp）')
     parser.add_argument('--rime-ice-tencent', action='store_true',
                         help='同时引入 rime-ice tencent（无拼音，自动注音）')
     parser.add_argument('--out', default=os.path.normpath(
@@ -578,51 +566,59 @@ def main():
         sys.exit('找不到 pinyin_simp.dict.yaml，请用 --pinyin-simp 指定')
 
     # ---------------- 数据源 ----------------
+    # 字频/读音权重来自所有来源（danzi 两个变体共用）；词条按变体分开：
+    #   simp = pinyin_simp 词（+ --words）
+    #   ice  = rime-ice base/ext/others（+ tencent、+ --words）
     char_w = {}
     char_reading_w = {}
-    word_entries = []
-    vocab_entries = []
-    total_stats = {'rows': 0, 'words': 0, 'vocab': 0, 'skipped': 0}
-    sources = []
 
-    def absorb(path, use_words=True):
+    def read_source(path):
         cw, crw, words, vocab, stats = load_dict(path, args.default_weight)
         for ch, w in cw.items():
             char_w[ch] = max(char_w.get(ch, 0.0), w)
         for key, w in crw.items():
             char_reading_w[key] = max(char_reading_w.get(key, 0.0), w)
-        total_stats['rows'] += stats['rows']
-        if use_words:
-            word_entries.extend(words)
-            vocab_entries.extend(vocab)
-            total_stats['words'] += stats['words']
-            total_stats['vocab'] += stats['vocab']
-            total_stats['skipped'] += stats['skipped']
-        sources.append((path, stats))
-
-    absorb(pinyin_simp, use_words=not args.no_pinyin_simp_words)
-    for path in args.words:
-        if not os.path.exists(path):
-            sys.exit('找不到词库：%s' % path)
-        absorb(path)
-
-    if args.rime_ice:
-        ice = rime_ice_files(args.rime_ice)
-        if os.path.exists(ice['char']):
-            absorb(ice['char'], use_words=False)
-        for path in ice['words']:
-            if os.path.exists(path):
-                absorb(path)
-        if args.rime_ice_tencent and os.path.exists(ice['tencent']):
-            absorb(ice['tencent'])
-
-    print('数据源：')
-    for path, stats in sources:
         print('  %s  (%d 行, 词 %d, 无拼音 %d, 跳过 %d)'
               % (path, stats['rows'], stats['words'],
                  stats['vocab'], stats['skipped']))
+        return words, vocab
+
+    print('数据源：')
+    simp_words, simp_vocab = read_source(pinyin_simp)
+
+    extra_words, extra_vocab = [], []
+    for path in args.words:
+        if not os.path.exists(path):
+            sys.exit('找不到词库：%s' % path)
+        w, v = read_source(path)
+        extra_words.extend(w)
+        extra_vocab.extend(v)
+
+    ice_words, ice_vocab = [], []
+    if args.rime_ice and os.path.isdir(args.rime_ice):
+        ice = rime_ice_files(args.rime_ice)
+        if os.path.exists(ice['char']):
+            read_source(ice['char'])  # 只取字频
+        for path in ice['words']:
+            if os.path.exists(path):
+                w, v = read_source(path)
+                ice_words.extend(w)
+                ice_vocab.extend(v)
+        if args.rime_ice_tencent and os.path.exists(ice['tencent']):
+            w, v = read_source(ice['tencent'])
+            ice_words.extend(w)
+            ice_vocab.extend(v)
+    ice_ready = bool(ice_words)
+    if not ice_ready:
+        print('  未找到 rime-ice 词库（%s），只生成 simp 词库' % args.rime_ice)
+
+    # --words 追加词库两个变体都加
+    simp_words.extend(extra_words)
+    simp_vocab.extend(extra_vocab)
+    ice_words.extend(extra_words)
+    ice_vocab.extend(extra_vocab)
+
     print('  字频 %d 字' % len(char_w))
-    print('  词条 %d（无拼音 %d）' % (len(word_entries), len(vocab_entries)))
 
     zidb_path = os.path.join(args.source, 'Lambda', 'ZiDB', '通常.txt')
     zidb = load_zidb(zidb_path)
@@ -633,30 +629,38 @@ def main():
     char_codes = build_char_codes(zidb, zidb_static, char_w,
                                   char_reading_w, args.default_weight)
     danzi = build_danzi(char_codes, args.initial_weight)
-    cizu, skipped = build_cizu(word_entries, vocab_entries, char_codes,
-                               args.abbrev_weight, args.default_weight)
 
     os.makedirs(args.out, exist_ok=True)
     scale = args.weight_scale
     print('词频缩放系数 %.6g；节奏码 ×%.6g；1 键码 ×%.6g'
           % (scale, args.abbrev_weight, args.initial_weight))
-    print('无法注音：拼音词 %d，自动注音 %d'
-          % (skipped['pinyin'], skipped['vocab']))
 
     n1 = write_dict(os.path.join(args.out, 'xkjd27c_flow.danzi.dict.yaml'),
                     DANZI_HEADER, danzi, scale)
-    n2 = write_dict(os.path.join(args.out, 'xkjd27c_flow.cizu.dict.yaml'),
-                    CIZU_HEADER, cizu, scale)
     shape_path = os.path.join(args.out, 'xkjd27c_flow.shape.txt')
     with open(shape_path, 'w', encoding='utf-8', newline='\n') as f:
         f.write('# 键道27C Flow 形码表（ZiDB 前 4 笔画 -> aeiov）\n')
         for char, code in sorted(shapes.items()):
             f.write('%s\t%s\n' % (char, code))
-    with open(os.path.join(args.out, 'xkjd27c_flow.dict.yaml'), 'w',
-              encoding='utf-8', newline='\n') as f:
-        f.write(MAIN_DICT)
 
-    print('单字 %d 条，词组 %d 条，形码 %d 字' % (n1, n2, len(shapes)))
+    # 旧版生成物（cizu / 单一主码表）清理掉，避免混淆
+    for stale in ('xkjd27c_flow.cizu.dict.yaml', 'xkjd27c_flow.dict.yaml'):
+        p = os.path.join(args.out, stale)
+        if os.path.exists(p):
+            os.remove(p)
+
+    variants = [('simp', 'pinyin_simp', simp_words, simp_vocab)]
+    if ice_ready:
+        variants.append(('ice', 'rime-ice', ice_words, ice_vocab))
+    for variant, note, words, vocab in variants:
+        cizu, skipped = build_cizu(words, vocab, char_codes,
+                                   args.abbrev_weight, args.default_weight)
+        path = os.path.join(args.out, 'xkjd27c_flow.%s.dict.yaml' % variant)
+        n = write_dict(path, variant_header(variant, note), cizu, scale)
+        print('词库 %s：%d 条（无法注音：拼音词 %d，自动注音 %d）'
+              % (variant, n, skipped['pinyin'], skipped['vocab']))
+
+    print('单字 %d 条，形码 %d 字' % (n1, len(shapes)))
 
 
 if __name__ == '__main__':

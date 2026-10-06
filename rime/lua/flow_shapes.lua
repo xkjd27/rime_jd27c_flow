@@ -10,14 +10,22 @@ M.ready = false
 local expected_cache = {}
 local function resource_paths(env, suffix)
     local dict = env.engine.schema.config:get_string("translator/dictionary")
-    local paths = {}
-    if rime_api and rime_api.get_user_data_dir then
-        paths[#paths + 1] = rime_api.get_user_data_dir() ..
-            "/" .. dict .. suffix
+    local names = { dict }
+    -- 词库变体名（xkjd27c_flow.ice / .simp）：共享文件按基础名再找一次
+    local base = dict:match("^(.-)%.[^%.]+$")
+    if base and base ~= dict then
+        names[#names + 1] = base
     end
-    if rime_api and rime_api.get_shared_data_dir then
-        paths[#paths + 1] = rime_api.get_shared_data_dir() ..
-            "/" .. dict .. suffix
+    local paths = {}
+    for _, name in ipairs(names) do
+        if rime_api and rime_api.get_user_data_dir then
+            paths[#paths + 1] = rime_api.get_user_data_dir() ..
+                "/" .. name .. suffix
+        end
+        if rime_api and rime_api.get_shared_data_dir then
+            paths[#paths + 1] = rime_api.get_shared_data_dir() ..
+                "/" .. name .. suffix
+        end
     end
     return paths
 end

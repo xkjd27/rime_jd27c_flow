@@ -1,11 +1,13 @@
-# 键道27C Flow 词组码表
+# 键道27C Flow 词库（pinyin_simp）
 # 由 tools/build_flow_dict.py 自动生成，请勿手工修改
 # 2 字：音音全码；3/4 字：首字母；5 字以上：前三首 + 末一首
 ---
-name: xkjd27c_flow.cizu
+name: xkjd27c_flow.simp
 version: "1.2"
 sort: by_weight
 use_preset_vocabulary: false
+import_tables:
+  - xkjd27c_flow.danzi
 ...
 重中之重	; ; ; ;	367
 政治制度	; ; ; d	200
