@@ -635,7 +635,7 @@ def main():
                         help='全局词频缩放（默认 %(default)s）')
     parser.add_argument('--abbrev-weight', type=float, default=1.0,
                         help='简码（3 字以上首字母）词频系数（默认 %(default)s）')
-    parser.add_argument('--length-weight', type=float, default=0.7,
+    parser.add_argument('--length-weight', type=float, default=0.35,
                         help='词组按字数降权底数：每多 1 字乘一次（默认 %(default)s，1 = 不降权）')
     parser.add_argument('--initial-weight', type=float, default=1.0,
                         help='1 键声母码词频系数（默认 %(default)s）')
