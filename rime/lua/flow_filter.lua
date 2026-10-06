@@ -65,7 +65,7 @@ local function collect_exclusions(input, shape)
     return excluded
 end
 
--- 纯形码输入（只有 aeiov）：走笔码表，不做音码自动前进/提示
+-- 纯形码输入（只有 aeiov）：走纯形码表，不做音码自动前进/提示
 local function is_shape_only_input(s)
     return s ~= "" and s:match("^[aeiov]+$") ~= nil
 end

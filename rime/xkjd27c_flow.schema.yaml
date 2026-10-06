@@ -6,7 +6,7 @@
 # 只保留键道27C 的音码（声母 + 韵母，一字两码），
 # 词组用键道原版简码，逐词上屏（四码 / 形码顶功）。
 # 码表由 tools/build_flow_dict.py 生成。
-# 引擎仍用 script_translator：笔码连打与兵底候选需要它的整句合成。
+# 引擎仍用 script_translator：笔码连打与兜底候选需要它的整句合成。
 
 schema:
   schema_id: xkjd27c_flow

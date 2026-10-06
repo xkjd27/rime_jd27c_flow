@@ -24,7 +24,7 @@
 --     本级首位（不顺延）、`=` 在本级内下移。
 --
 -- 行为：
---   * 形码键      -> 输入串只有 aeiov 时进入输入串，由笔码表（xkjd27c_flow.bima）
+--   * 形码键      -> 输入串只有 aeiov 时进入输入串，由纯形码表（xkjd27c_flow.shape）
 --                    匹配（纯笔码）；否则追加到 flow_shape（最长 12 键），刷新候选
 --   * 回车        -> 原样上屏输入（输入 + 形码）
 --   * BackSpace   -> flow_shape 非空则删掉最后一个形码
@@ -44,7 +44,7 @@ local XK_RETURN = 0xff0d
 local KEY_MINUS = 0x2d
 local KEY_EQUAL = 0x3d
 
--- 纯形码输入（只有 aeiov）：走笔码表，不走音码逻辑
+-- 纯形码输入（只有 aeiov）：走纯形码表，不走音码逻辑
 local function is_shape_only(s)
     return s ~= "" and s:match("^[aeiov]+$") ~= nil
 end
@@ -237,7 +237,7 @@ local function processor(key_event, env)
     -- 形码键
     if SHAPE_KEYS[key] then
         if ctx:is_composing() then
-            -- 纯笔码输入（还没有音码）：形码进入输入串，交给笔码表匹配
+            -- 纯笔码输入（还没有音码）：形码进入输入串，交给纯形码表匹配
             if ctx.input == "" or is_shape_only(ctx.input) then
                 return 2
             end

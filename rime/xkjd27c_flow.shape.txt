@@ -1,4 +1,4 @@
-# 键道27C Flow 形码表（ZiDB 前 4 笔画 -> aeiov）
+# 键道27C Flow 期望形码表（ZiDB 前 4 笔画 -> aeiov）
 〇	oo
 ㄓ	iaiv
 㑇	ieaa

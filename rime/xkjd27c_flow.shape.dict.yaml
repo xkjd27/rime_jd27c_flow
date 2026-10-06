@@ -1,7 +1,7 @@
-# 键道27C Flow 笔码表（纯形码 aeiov）
+# 键道27C Flow 纯形码表（shape，aeiov）
 # 由 tools/build_flow_dict.py 从原版 buchong「形简/补充提示/部首偏旁」提取
 ---
-name: xkjd27c_flow.bima
+name: xkjd27c_flow.shape
 version: "1.0"
 sort: original
 use_preset_vocabulary: false

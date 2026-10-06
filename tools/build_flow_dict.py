@@ -200,8 +200,8 @@ def iter_dict_rows(path):
             yield line.split('\t')
 
 
-def load_bima_entries(path):
-    """从原版 buchong 里提取纯形码（笔码）条目：code 全部是 aeiov。
+def load_shape_entries(path):
+    """从原版 buchong 里提取纯形码（笔形）条目：code 全部是 aeiov。
 
     包括原版的「形简」「补充提示」「部首偏旁」三段。
     """
@@ -494,11 +494,11 @@ use_preset_vocabulary: false
 ...
 """
 
-BIMA_HEADER = """\
-# 键道27C Flow 笔码表（纯形码 aeiov）
+SHAPE_DICT_HEADER = """\
+# 键道27C Flow 纯形码表（shape，aeiov）
 # 由 tools/build_flow_dict.py 从原版 buchong「形简/补充提示/部首偏旁」提取
 ---
-name: xkjd27c_flow.bima
+name: xkjd27c_flow.shape
 version: "1.0"
 sort: original
 use_preset_vocabulary: false
@@ -517,7 +517,7 @@ def variant_header(variant, note):
         'use_preset_vocabulary: false\n'
         'import_tables:\n'
         '  - xkjd27c_flow.danzi\n'
-        '  - xkjd27c_flow.bima\n'
+        '  - xkjd27c_flow.shape\n'
         '...\n' % (note, variant))
 
 
@@ -662,7 +662,7 @@ def main():
     char_codes = build_char_codes(zidb, zidb_static, char_w,
                                   char_reading_w, args.default_weight)
     danzi = build_danzi(char_codes, args.initial_weight)
-    bima = load_bima_entries(
+    shape_dict = load_shape_entries(
         os.path.join(args.source, 'rime', 'xkjd27c.buchong.dict.yaml'))
 
     os.makedirs(args.out, exist_ok=True)
@@ -674,15 +674,15 @@ def main():
                     DANZI_HEADER, danzi, scale)
     shape_path = os.path.join(args.out, 'xkjd27c_flow.shape.txt')
     with open(shape_path, 'w', encoding='utf-8', newline='\n') as f:
-        f.write('# 键道27C Flow 形码表（ZiDB 前 4 笔画 -> aeiov）\n')
+        f.write('# 键道27C Flow 期望形码表（ZiDB 前 4 笔画 -> aeiov）\n')
         for char, code in sorted(shapes.items()):
             f.write('%s\t%s\n' % (char, code))
 
-    # 笔码表：原版 buchong 的纯形码条目（代码全为 aeiov），保持原顺序
-    bima_path = os.path.join(args.out, 'xkjd27c_flow.bima.dict.yaml')
-    with open(bima_path, 'w', encoding='utf-8', newline='\n') as f:
-        f.write(BIMA_HEADER)
-        for text, code in bima:
+    # 纯形码表（shape）：原版 buchong 的纯形码条目，保持原顺序
+    shape_dict_path = os.path.join(args.out, 'xkjd27c_flow.shape.dict.yaml')
+    with open(shape_dict_path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(SHAPE_DICT_HEADER)
+        for text, code in shape_dict:
             f.write('%s\t%s\t1\n' % (text, code))
 
     # 旧版生成物（cizu / 单一主码表）清理掉，避免混淆
@@ -702,7 +702,7 @@ def main():
         print('词库 %s：%d 条（无法注音：拼音词 %d，自动注音 %d）'
               % (variant, n, skipped['pinyin'], skipped['vocab']))
 
-    print('单字 %d 条，笔码 %d 条，形码 %d 字' % (n1, len(bima), len(shapes)))
+    print('单字 %d 条，纯形码 %d 条，期望形码 %d 字' % (n1, len(shape_dict), len(shapes)))
 
 
 if __name__ == '__main__':
