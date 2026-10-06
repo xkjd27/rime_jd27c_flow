@@ -119,10 +119,9 @@ function M.store(ctx)
         if not codes.is_scheme_code(phrase, sound) then
             sound = codes.scheme_code(phrase) or sound
         end
-        -- 形码删掉重填：手打的笔键只用于筛选，全码用这个词需要的完整形码
-        if had_shape then
-            shape = shapes.expected(phrase) or ""
-        end
+        -- 形码删掉重填：手打的笔键只用于筛选，全码一律用这个词需要的
+        -- 完整形码（不管是没打还是打了一半/乱打）
+        shape = shapes.expected(phrase) or ""
         order.insert(sound .. "|" .. shape, phrase, 1)
     end
     ctx:set_property(PROP, "")
