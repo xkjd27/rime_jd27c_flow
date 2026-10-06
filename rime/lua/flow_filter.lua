@@ -80,15 +80,6 @@ local function is_shape_only_input(s)
     return s ~= "" and s:match("^[aeiov]+$") ~= nil
 end
 
--- 把当前形码接到候选 preedit 末尾显示
-local function annotate(cand, shape)
-    if shape == "" then
-        return
-    end
-    local p = cand.preedit or ""
-    cand.preedit = (p == "" and shape) or (p .. " " .. shape)
-end
-
 -- 把 base 的候选按期望形码前缀分桶（每个候选 O(形码长) 一次），
 -- shape_hint 里就不用每步线性扫 base 了
 local function build_buckets(base, shape)
@@ -185,6 +176,12 @@ local function filter(translation, env)
     local input = ctx.input
     local input_len = #input
     local shape = ctx:get_property("flow_shape") or ""
+    -- 形码挂在当前段的 prompt 上（Composition::GetPreedit 会把它插到结尾）：
+    -- 这样即使没有候选、preedit 退化回原始输入，形码也照样显示
+    local seg = ctx.composition and ctx.composition:back()
+    if seg then
+        seg.prompt = shape ~= "" and (" " .. shape) or ""
+    end
     local creating = ctx:get_property("flow_create") == "1"
     local key = input .. "|" .. shape
 
@@ -252,7 +249,6 @@ local function filter(translation, env)
     local hint_ctx = {}
     for _, cand in ipairs(final) do
         apply_hint(cand, hint_input, shape, base, excluded, current_top, hint_ctx)
-        annotate(cand, shape)
         if creating and hint_input == "" then
             -- 只有 `：在标点的〔半角〕/〔全角〕提示后补「造词模式」
             cand.comment = (cand.comment or "") .. "造词模式"
