@@ -1,0 +1,18 @@
+# 次简默认值（原版 buchong「二重」段的单键条目）
+# 键 = 声母键、值 = 该键的默认次简；Tab 学习 / 用户覆盖存在 flow_order 的 ~secondary 里
+# 这个文件不是 .dict.yaml、也不在 schema 里引用，librime 不会拿它去编译词库
+b: 吧
+d: 打
+f: 发
+h: 嘿
+j: 及
+l: 啦
+m: 嘛
+n: 哪
+q: 期
+t: 挺
+u: 实
+w: 玩
+x: 嗯
+y: 重
+z: 咱

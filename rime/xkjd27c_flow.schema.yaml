@@ -62,6 +62,11 @@ translator:
   enable_encoder: false
   enable_charset_filter: false
 
+# 引擎（flow_engine_lua）需要的键位表 —— 两套方案的差异就在这两个字母表
+flow_engine:
+  sound_keys: "bcdfghjklmnpqrstuwxyz;"   # 声母键
+  shape_keys: "aeiov"    # 笔形键
+
 # 调序与造词引擎数据库
 flow_order:
   # 存储后端：leveldb（默认，高性能）| txt（纯文本，方便调试与手动修改）
