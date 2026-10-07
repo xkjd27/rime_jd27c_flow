@@ -503,4 +503,11 @@ local function init(env)
     end
 end
 
-return { func = filter, tags_match = tags_match, init = init }
+-- 与 init 里的 order.init 配对：librime-lua 的组件析构会调 fini，
+-- flow_order 按 users 计数，少了这里 order.userdb 的 LOCK 直到进程退出
+-- 都不会释放（schema 切换 / 引擎销毁时就会一直占着）
+local function fini(env)
+    order.close()
+end
+
+return { func = filter, tags_match = tags_match, init = init, fini = fini }
