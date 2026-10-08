@@ -13,6 +13,8 @@
 㛃	vvae
 㛚	aeao
 㛹	aeiv
+㞌	avai
+㞎	avai
 㟃	iaav
 㠇	iaov
 㠓	iaii
@@ -37,13 +39,13 @@
 㳚	aveo
 㴔	aeaa
 㵐	aveo
-㶲	ooea
+㶲	oeea
 㸆	oeev
 㸌	oevo
 㹴	eavi
 㺄	eaiv
 㻬	vvvo
-㽏	aiva
+㽏	aivi
 㿠	eiio
 䁖	iaoe
 䂮	vvve
@@ -86,7 +88,7 @@
 䴖	vvea
 䴗	iaea
 䴘	eeea
-䴙	avov
+䴙	avea
 䶮	vevv
 一	vv
 丁	vii
@@ -127,7 +129,7 @@
 丹	eaov
 为	oeao
 主	ovvi
-丼	vvoo
+丼	vvei
 丽	viao
 举	oovv
 乂	eoo
@@ -178,7 +180,7 @@
 亘	voiv
 亚	viio
 些	ivvv
-亟	aiia
+亟	aioa
 亡	ovaa
 亢	ovea
 交	oveo
@@ -212,7 +214,7 @@
 今	ioaa
 介	ieii
 仍	iaee
-从	iiii
+从	iii
 仐	ieoo
 仑	ieaa
 仓	iaaa
@@ -345,7 +347,7 @@
 侬	ioae
 侮	ieva
 侯	iave
-侴	ivav
+侴	ivai
 侵	iavv
 侹	ievi
 便	ivia
@@ -388,7 +390,7 @@
 倍	iovo
 倏	iiea
 倒	ivao
-倓	iooe
+倓	ioei
 倔	iave
 倕	ievi
 倘	iioe
@@ -427,12 +429,12 @@
 健	iavv
 偬	ieae
 偭	ivei
-偰	ivvi
+偰	ivvv
 偲	iiav
 偶	iiav
 偷	iive
 偻	ioev
-偾	ieov
+偾	ieoi
 偿	iioe
 傀	ieia
 傃	ivvi
@@ -453,7 +455,7 @@
 傺	ieao
 傻	ieia
 僇	iaov
-僎	iaaa
+僎	iava
 像	ieai
 僔	ioev
 僖	ivoo
@@ -463,7 +465,7 @@
 僬	iiov
 僭	ivae
 僮	iovo
-僰	vivi
+僰	viii
 僳	ivia
 僵	ivia
 僻	iave
@@ -472,8 +474,8 @@
 儋	ieav
 儒	ivoa
 儡	iiav
-儦	iova
-儳	ioai
+儦	iove
+儳	ieao
 儴	iovo
 儿	eaa
 兀	veaa
@@ -561,7 +563,7 @@
 凘	ovvi
 凛	ovov
 凝	ovea
-几	eaaa
+几	eaa
 凡	eaoo
 凤	eaao
 凫	eaea
@@ -662,7 +664,7 @@
 励	veae
 劲	aoae
 劳	iiae
-劼	eoae
+劼	voae
 劾	ovae
 势	ieae
 勃	eoae
@@ -681,6 +683,7 @@
 勤	viae
 勥	avae
 勰	aeia
+勷	ovae
 勹	eaa
 勺	eaoo
 勾	eaao
@@ -796,7 +799,7 @@
 受	eoao
 变	ovao
 叙	ivao
-叚	aviv
+叚	avav
 叛	oeee
 叟	eiao
 叠	aoia
@@ -876,7 +879,7 @@
 呀	ovai
 呃	ovea
 呆	ovv
-呇	aaoo
+呇	aoo
 呈	ovvi
 告	evoo
 呋	ovve
@@ -1011,6 +1014,7 @@
 唢	oioe
 唣	oeia
 唤	oeai
+唦	oaie
 唧	oavv
 唪	ovvv
 唬	oiva
@@ -1080,7 +1084,7 @@
 喱	ovei
 喳	ovoi
 喵	oiii
-喷	oeov
+喷	oeoi
 喹	oveo
 喻	oive
 喽	ooev
@@ -1167,6 +1171,7 @@
 噬	oevo
 噱	oiva
 噶	oiio
+噷	oovo
 噻	oooa
 噼	oave
 嚄	oiii
@@ -1176,12 +1181,13 @@
 嚏	oeoo
 嚓	oooa
 嚚	oovi
+嚜	oiao
 嚣	oove
 嚭	vove
 嚯	ovoa
 嚷	oovo
 嚼	oeoo
-囃	ovii
+囃	oovi
 囊	vioo
 囍	vovo
 囔	ovia
@@ -1407,6 +1413,7 @@
 墦	voeo
 墨	iavo
 墩	voov
+墫	vooe
 墼	vivo
 壁	avvo
 壅	ovvo
@@ -1475,7 +1482,7 @@
 奡	veve
 奢	veeo
 奥	eive
-奭	vvev
+奭	vveo
 女	aevv
 奴	aeao
 奶	aeae
@@ -1528,7 +1535,7 @@
 姚	aeeo
 姜	oeae
 姝	aeev
-姞	aeeo
+姞	aevo
 姣	aeov
 姤	aeee
 姥	aeeo
@@ -1638,8 +1645,9 @@
 嬗	aeov
 嬛	aeia
 嬜	ovae
+嬢	aeov
 嬥	aeao
-嬬	aevi
+嬬	aevo
 嬲	iaae
 嬴	ovoe
 嬷	aeov
@@ -1860,7 +1868,8 @@
 峪	iaeo
 峭	iaio
 峰	iaea
-峱	eaav
+峱	eaai
+峵	iaoo
 峸	iave
 峻	iaao
 峿	iavi
@@ -1946,6 +1955,7 @@
 巷	viav
 巽	avvi
 巾	iaii
+巿	viai
 币	eiai
 市	ovia
 布	veia
@@ -2060,6 +2070,7 @@
 弈	ovve
 弊	oeve
 弋	vaoo
+弌	vvao
 式	vviv
 弑	eovv
 弓	avaa
@@ -2090,7 +2101,7 @@
 彐	avvv
 归	ieav
 当	ioav
-录	avao
+录	avaa
 彖	aave
 彗	vvav
 彘	aaev
@@ -2203,7 +2214,7 @@
 怫	ooav
 怯	oovo
 怵	oovo
-怹	ioao
+怹	iaoa
 总	oeoa
 怼	aooa
 怿	ooao
@@ -2590,7 +2601,7 @@
 排	ieiv
 掖	ieov
 掘	ieav
-掞	ieoo
+掞	ieoe
 掠	ieov
 探	ieoa
 掣	evie
@@ -2768,7 +2779,7 @@
 斜	ivoo
 斝	oooo
 斟	vioo
-斠	iioo
+斠	vvoo
 斡	eoio
 斤	eevi
 斥	eevi
@@ -2936,7 +2947,7 @@
 朊	evve
 朋	eee
 服	eaia
-朏	eoai
+朏	eaii
 朐	eeao
 朓	eeov
 朔	oeee
@@ -2992,7 +3003,7 @@
 杳	voii
 杵	veve
 杷	vaiv
-杻	vavi
+杻	vaiv
 杼	vaoa
 松	veoa
 板	veea
@@ -3023,7 +3034,7 @@
 枭	eavv
 枯	veoo
 枰	vvoe
-枲	aoov
+枲	aovv
 枳	voeo
 枵	vova
 架	aevv
@@ -3082,7 +3093,7 @@
 校	vove
 栩	vaov
 株	vevv
-栱	vvie
+栱	vvii
 栲	veov
 栳	veov
 栴	veve
@@ -3149,7 +3160,7 @@
 梴	veiv
 梵	vvea
 梷	ivvv
-梼	vvve
+梼	vvvv
 梽	vvoo
 梾	vvoe
 梿	vvav
@@ -3169,7 +3180,7 @@
 棣	vavv
 棤	vvii
 棨	oavv
-棪	vooe
+棪	voei
 棫	vvov
 棬	voev
 森	vvvv
@@ -3239,7 +3250,7 @@
 榑	vvia
 榔	voav
 榕	vooa
-榖	eoea
+榖	voea
 榘	evvv
 榙	viii
 榛	vvvv
@@ -3266,7 +3277,7 @@
 槜	viov
 槟	vooa
 槠	voae
-槭	vvea
+槭	vvei
 槱	vvia
 槲	veae
 槽	vvia
@@ -3287,6 +3298,7 @@
 橇	vevv
 橐	vive
 橑	vveo
+橒	vvoa
 橘	vaoa
 橙	vaoe
 橛	vveo
@@ -3422,7 +3434,7 @@
 氼	aii
 氽	iaa
 氾	aaaa
-氿	aeae
+氿	aeaa
 汀	avii
 汁	aeoo
 求	viov
@@ -3503,7 +3515,7 @@
 泂	aiao
 泃	aeao
 泄	avii
-泅	aiav
+泅	aiai
 泇	aaeo
 泉	eiaa
 泊	aeia
@@ -3542,7 +3554,7 @@
 泽	aaov
 泾	aaov
 洁	avoo
-洄	aiav
+洄	aiao
 洇	aiav
 洈	aeav
 洋	aoev
@@ -3654,7 +3666,7 @@
 液	aovi
 涴	aooa
 涵	aaio
-涸	aiav
+涸	aiae
 涿	avea
 淀	aooa
 淄	aaaa
@@ -3665,7 +3677,7 @@
 淌	aioe
 淏	aoiv
 淑	aivv
-淖	aivi
+淖	aivo
 淘	aeae
 淙	aooa
 淜	aeee
@@ -3795,7 +3807,7 @@
 滨	aooa
 滩	aaoi
 滪	aaoa
-滫	aiea
+滫	aiie
 滴	aovo
 滹	aiva
 漂	avia
@@ -3867,7 +3879,7 @@
 澴	aiai
 澶	aovi
 澹	aeav
-澼	aaeo
+澼	aave
 澽	aiva
 激	aeia
 濂	aove
@@ -3885,7 +3897,7 @@
 瀌	aove
 瀍	aove
 瀑	aoiv
-瀔	aeov
+瀔	avoo
 瀚	aeoo
 瀛	aova
 瀣	aive
@@ -3894,6 +3906,7 @@
 瀵	aoev
 瀹	aivo
 瀼	aovo
+灀	avoa
 灈	aiav
 灌	aiio
 灏	aoio
@@ -3967,7 +3980,7 @@
 烷	oeoo
 烹	ovoo
 烺	oeoa
-烻	ovei
+烻	oeei
 烽	oeea
 焆	oeoe
 焉	viva
@@ -4101,7 +4114,7 @@
 犏	evoa
 犒	evov
 犟	avev
-犨	iove
+犨	ioev
 犬	veoo
 犯	eaaa
 犰	eaea
@@ -4213,7 +4226,7 @@
 玦	vvav
 玩	vvvv
 玫	vvev
-玭	vvvi
+玭	vvva
 玮	vvvv
 环	vvve
 现	vvia
@@ -4274,7 +4287,7 @@
 琈	vveo
 琉	vvov
 琊	vvva
-琎	vvve
+琎	vvvv
 琏	vvva
 琐	vvio
 琔	vvoo
@@ -4764,7 +4777,7 @@
 硷	veiv
 硼	veee
 硿	veoo
-碁	viiv
+碁	vive
 碃	vevv
 碇	veoo
 碈	veea
@@ -5125,7 +5138,7 @@
 类	oeve
 籼	oeia
 籽	oeai
-粄	ooee
+粄	oeee
 粉	oeeo
 粑	oeai
 粒	oeov
@@ -5181,6 +5194,7 @@
 絷	ieaa
 綦	viaa
 綮	oaaa
+緌	aaev
 縠	voea
 縢	eoev
 縻	ovaa
@@ -5610,7 +5624,7 @@
 腴	eeiv
 腹	eevo
 腺	eeia
-腻	evvi
+腻	evvv
 腼	evei
 腽	eoii
 腾	eoev
@@ -5639,9 +5653,9 @@
 臃	eova
 臆	eovo
 臊	eooo
-臌	evov
+臌	evoo
 臑	evoa
-臜	eoev
+臜	eevi
 臣	viav
 臧	vevi
 自	eiav
@@ -5909,6 +5923,7 @@
 菂	iiei
 菅	iioo
 菇	iiae
+菈	iiie
 菉	iiav
 菊	iiea
 菌	iiia
@@ -6010,7 +6025,7 @@
 蒽	iiia
 蒿	iiov
 蓁	iivv
-蓂	iioa
+蓂	iioi
 蓄	iiov
 蓇	iiia
 蓉	iioo
@@ -6099,7 +6114,7 @@
 藕	iivv
 藜	iiev
 藟	iiia
-藠	iioi
+藠	iiei
 藤	iieo
 藦	iiov
 藨	iiov
@@ -6130,6 +6145,7 @@
 虬	iaaa
 虮	iaea
 虱	aeia
+虵	iaai
 虷	iavv
 虸	iaai
 虹	iavi
@@ -6150,6 +6166,7 @@
 蚍	iava
 蚓	iaav
 蚕	vvia
+蚖	iavv
 蚜	iava
 蚝	iaev
 蚣	iaeo
@@ -6301,7 +6318,7 @@
 蠡	aaia
 蠢	vvia
 蠲	oeia
-蠹	viia
+蠹	vive
 蠼	iaia
 血	eiai
 衃	eive
@@ -6309,7 +6326,7 @@
 衅	eioe
 行	eevv
 衍	eeav
-衎	eivv
+衎	eevv
 衒	eeov
 衔	eeio
 街	eevo
@@ -6452,13 +6469,14 @@
 詈	iaov
 詟	veov
 詧	eaov
+詨	oaov
 詹	eaov
 誉	ooov
 誊	oeov
 誓	ieov
 誧	ovvi
 謇	ooov
-謦	eoov
+謦	voov
 譞	ovia
 警	iiov
 譬	avov
@@ -6626,7 +6644,7 @@
 豪	ovve
 豫	aoea
 豮	veeo
-豳	iave
+豳	ivea
 豸	eooe
 豹	eoea
 豺	eovi
@@ -6657,7 +6675,7 @@
 购	aoea
 贮	aooo
 贯	aaao
-贰	vvao
+贰	vvva
 贱	aovv
 贲	eoao
 贳	viao
@@ -6810,7 +6828,7 @@
 蹉	oioe
 蹊	oieo
 蹋	oioi
-蹐	oieo
+蹐	oiov
 蹑	oivi
 蹒	oiii
 蹙	veoi
@@ -7106,7 +7124,7 @@
 酂	evai
 酃	voai
 酅	iaai
-酆	ivvv
+酆	ivai
 酉	viae
 酊	vivi
 酋	oevi
@@ -7180,7 +7198,7 @@
 鉴	iiio
 銎	viio
 銮	ovio
-鋆	voiv
+鋆	voio
 鋈	aeio
 錾	vaio
 鍪	aoio
@@ -7567,7 +7585,7 @@
 雪	voav
 雫	vovi
 雯	voov
-雱	viov
+雱	voov
 雳	vove
 零	voio
 雷	voia
@@ -7588,7 +7606,7 @@
 霖	vovv
 霜	vovi
 霞	voav
-霨	viav
+霨	voav
 霪	voae
 霭	vooa
 霰	vovi
@@ -7607,7 +7625,7 @@
 面	veia
 靥	veve
 革	viia
-靬	vavv
+靬	vivv
 靰	vive
 靳	viee
 靴	viie
@@ -7616,8 +7634,8 @@
 靺	vivv
 靼	vioi
 靽	vioe
-靿	vaaa
-鞁	viai
+靿	viaa
+鞁	viae
 鞅	viia
 鞋	vivo
 鞌	oovi
@@ -7629,6 +7647,7 @@
 鞠	viea
 鞡	viie
 鞣	viao
+鞥	viiv
 鞧	vioe
 鞨	vioi
 鞫	viea
@@ -7833,7 +7852,7 @@
 骣	aaav
 骤	aavi
 骥	aaiv
-骦	aavi
+骦	aavo
 骧	aaov
 骨	iaee
 骰	iaea
@@ -8064,7 +8083,7 @@
 鹟	eoea
 鹠	eaea
 鹡	ovea
-鹢	eoea
+鹢	oeea
 鹣	oeea
 鹤	oaea
 鹦	aoea
@@ -8084,7 +8103,7 @@
 鹴	voea
 鹾	ivoe
 鹿	ovva
-麀	ovai
+麀	ovea
 麂	ovea
 麇	ovev
 麈	ovov
@@ -8103,7 +8122,7 @@
 麽	ovea
 麾	ovev
 黄	viia
-黇	iiiv
+黇	viiv
 黉	oovi
 黍	evia
 黎	evia
@@ -8173,13 +8192,15 @@
 龟	eaia
 龠	ivoo
 龢	ivev
+鿍	voea
+鿎	veve
 鿏	iovv
 	voea
 	veve
 	aaiv
 𠅤	ovia
 𠙶	aiai
-𠳐	ovve
+𠳐	ovvv
 𠳬	eoeo
 𡎚	vooa
 𡐓	voov
@@ -8191,7 +8212,7 @@
 𤞤	eavi
 𤧛	vvov
 𤩽	vveo
-𤫉	vvoe
+𤫉	vvov
 𥔲	veoo
 𥕢	vevi
 𥖨	veoo
@@ -8210,7 +8231,7 @@
 𨭉	ovio
 𨱇	iovi
 𨱏	ioii
-𨱑	ioii
+𨱑	iovi
 𨱔	iooe
 𨺙	aiei
 𩽾	eaoo
@@ -8238,7 +8259,7 @@
 𫐄	vave
 𫐐	vaei
 𫐓	vaao
-𫑡	oaii
+𫑡	oiai
 𫓧	iovv
 𫓯	iovo
 𫓶	iooe
@@ -8315,6 +8336,7 @@
 𬞟	iiiv
 𬟁	iivo
 𬟽	iava
+𬠅	iaio
 𬣙	oavv
 𬣞	oaoo
 𬣡	oavv
@@ -8357,6 +8379,7 @@
 𬳶	aaia
 𬳽	aaev
 𬳿	aaiv
+𬴂	aaiv
 𬴃	aavv
 𬴊	aaoe
 𬶋	eaea
@@ -8380,6 +8403,7 @@
 𭎂	voii
 𮔅	iaea
 𮝷	vaeo
+𰜳	aaoa
 𰻝	oooe
 𲎿	eoai
 𲰼	iaai

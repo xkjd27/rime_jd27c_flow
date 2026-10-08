@@ -1,5 +1,5 @@
 # 键道27C Flow 纯形码表（shape，aeiov）
-# 由 tools/build_flow_dict.py 从原版 buchong「形简/补充提示/部首偏旁」提取
+# 由 tools/build_flow_dict.py 从上游 补充.txt「形简/补充提示/部首偏旁」提取
 ---
 name: xkjd27c_flow.shape
 version: "1.0"

@@ -1428,6 +1428,7 @@ use_preset_vocabulary: false
 骉	b	2
 𬭛	b	2
 㘵	b	1
+㞎	b	1
 兡	b	1
 坋	b	1
 夶	b	1
@@ -1656,6 +1657,7 @@ use_preset_vocabulary: false
 蚆	br	8
 胈	br	5
 羓	br	3
+㞎	br	1
 妭	br	1
 朳	br	1
 别	bs	2000757
@@ -2044,6 +2046,7 @@ use_preset_vocabulary: false
 衰	c	7
 艸	c	6
 瘥	c	4
+墫	c	3
 臧	c	3
 䅟	c	1
 壿	c	1
@@ -2191,6 +2194,7 @@ use_preset_vocabulary: false
 皴	cw	307
 邨	cw	108
 吋	cw	74
+墫	cw	3
 壿	cw	1
 蹲	cw	1
 次	cy	2725966
@@ -2604,6 +2608,7 @@ use_preset_vocabulary: false
 赕	d	10
 踶	d	10
 𪠽	d	10
+𬠅	d	10
 髢	d	9
 俤	d	8
 筜	d	8
@@ -2650,6 +2655,7 @@ use_preset_vocabulary: false
 螲	d	1
 蟷	d	1
 迚	d	1
+鿎	d	1
 	d	1
 𣗋	d	1
 𤧛	d	1
@@ -2790,6 +2796,7 @@ use_preset_vocabulary: false
 垱	dl	108
 菪	dl	48
 𪠽	dl	10
+𬠅	dl	10
 筜	dl	8
 蟷	dl	1
 𣗋	dl	1
@@ -2892,6 +2899,7 @@ use_preset_vocabulary: false
 荙	dr	4
 𫟼	dr	2
 迚	dr	1
+鿎	dr	1
 	dr	1
 𨱏	dr	1
 都	ds	634293
@@ -3836,6 +3844,7 @@ use_preset_vocabulary: false
 阈	f	185
 鳐	f	184
 狁	f	183
+巿	f	179
 崦	f	177
 钒	f	176
 蝓	f	173
@@ -3890,6 +3899,7 @@ use_preset_vocabulary: false
 窅	f	79
 嫄	f	78
 嵛	f	75
+弌	f	75
 劓	f	74
 峣	f	74
 龠	f	73
@@ -4006,6 +4016,7 @@ use_preset_vocabulary: false
 翂	f	7
 蚄	f	7
 赗	f	7
+𬴂	f	7
 卬	f	6
 堐	f	6
 尉	f	6
@@ -4054,6 +4065,7 @@ use_preset_vocabulary: false
 蕡	f	2
 蕥	f	2
 薁	f	2
+蚖	f	2
 蝘	f	2
 蝜	f	2
 鄅	f	2
@@ -4063,6 +4075,7 @@ use_preset_vocabulary: false
 㑊	f	1
 㕮	f	1
 㙘	f	1
+㞌	f	1
 㳇	f	1
 㳚	f	1
 㺄	f	1
@@ -4076,6 +4089,7 @@ use_preset_vocabulary: false
 戉	f	1
 戭	f	1
 昖	f	1
+橒	f	1
 欹	f	1
 歅	f	1
 浲	f	1
@@ -4091,6 +4105,7 @@ use_preset_vocabulary: false
 艅	f	1
 苂	f	1
 虤	f	1
+虵	f	1
 蛇	f	1
 觃	f	1
 豮	f	1
@@ -4116,6 +4131,7 @@ use_preset_vocabulary: false
 𬸪	f	1
 𬺈	f	1
 𮔅	f	1
+𰜳	f	1
 䓛	f	0.1
 㴔	f	0.01
 与	f;	2104552
@@ -4379,6 +4395,7 @@ use_preset_vocabulary: false
 媖	fd	3
 䓨	fd	1
 瀴	fd	1
+𰜳	fd	1
 元	fg	1473347
 原	fg	1473346
 远	fg	1319096
@@ -4421,6 +4438,7 @@ use_preset_vocabulary: false
 贠	fg	10
 羱	fg	4
 薳	fg	4
+蚖	fg	2
 宛	fg	1
 鹓	fg	1
 𫘪	fg	1
@@ -4692,6 +4710,7 @@ use_preset_vocabulary: false
 罘	fn	215
 滏	fn	207
 郛	fn	203
+巿	fn	179
 菔	fn	170
 桴	fn	159
 幞	fn	157
@@ -4882,6 +4901,7 @@ use_preset_vocabulary: false
 拽	fs	2
 吔	fs	1
 嘢	fs	1
+虵	fs	1
 鵺	fs	1
 反	ft	1391455
 翻	ft	1391454
@@ -4981,7 +5001,10 @@ use_preset_vocabulary: false
 剕	fw	9
 蕰	fw	9
 筼	fw	7
+𬴂	fw	7
 涢	fw	5
+㞌	fw	1
+橒	fw	1
 贠	fw	1
 馧	fw	1
 	fw	1
@@ -5120,6 +5143,7 @@ use_preset_vocabulary: false
 圯	fy	145
 瘗	fy	96
 燚	fy	86
+弌	fy	75
 劓	fy	74
 殪	fy	71
 潩	fy	69
@@ -5538,6 +5562,7 @@ use_preset_vocabulary: false
 筀	g	1
 颪	g	1
 鹒	g	1
+鿍	g	1
 	g	1
 𦙶	g	1
 𨐈	g	1
@@ -5723,6 +5748,7 @@ use_preset_vocabulary: false
 矼	gl	4
 堽	gl	2
 㭎	gl	1
+鿍	gl	1
 	gl	1
 古	gn	621960
 故	gn	560446
@@ -6327,6 +6353,7 @@ use_preset_vocabulary: false
 鸻	h	9
 淴	h	8
 昒	h	7
+噷	h	6
 嫭	h	6
 缋	h	6
 蔊	h	6
@@ -6561,6 +6588,7 @@ use_preset_vocabulary: false
 恨	hk	326212
 痕	hk	144963
 哏	hk	52.9
+噷	hk	6
 𬣳	hk	1
 行	hl	2756706
 航	hl	116067
@@ -9193,6 +9221,7 @@ use_preset_vocabulary: false
 泐	l	34
 罍	l	33
 葎	l	31
+菈	l	28
 鳢	l	26
 瞵	l	25
 膦	l	23
@@ -9651,6 +9680,7 @@ use_preset_vocabulary: false
 旯	lr	2979
 瘌	lr	1496
 砬	lr	262
+菈	lr	28
 镴	lr	22
 蝲	lr	10
 鞡	lr	10
@@ -10224,6 +10254,7 @@ use_preset_vocabulary: false
 濛	m	19
 玟	m	19
 镅	m	19
+嚜	m	15
 渼	m	15
 鄚	m	15
 脒	m	14
@@ -10320,6 +10351,7 @@ use_preset_vocabulary: false
 么	mf	110511
 沫	mf	36929
 麽	mf	1766
+嚜	mf	15
 买	mh	477539
 卖	mh	303880
 埋	mh	139624
@@ -10450,6 +10482,7 @@ use_preset_vocabulary: false
 杩	mr	70
 孖	mr	58
 祃	mr	4
+嚜	mr	1.5
 摩	mr	1
 某	ms	342978
 灭	ms	280837
@@ -10526,6 +10559,7 @@ use_preset_vocabulary: false
 藦	mu	33
 么	mu	30
 耱	mu	24
+嚜	mu	15
 冒	mu	7
 万	mu	4
 嗼	mu	2
@@ -10563,6 +10597,7 @@ use_preset_vocabulary: false
 媄	mw	7
 糜	mw	6
 猸	mw	2
+嚜	mw	1.5
 槑	mw	1
 瑂	mw	1
 米	my	506111
@@ -10801,6 +10836,7 @@ use_preset_vocabulary: false
 挊	n	10
 氼	n	10
 臑	n	10
+嬢	n	6
 摄	n	4
 笯	n	4
 乸	n	3
@@ -10976,6 +11012,7 @@ use_preset_vocabulary: false
 哪	nw	42
 娘	nx	603856
 酿	nx	22424
+嬢	nx	6
 泥	ny	1422193
 你	ny	1422192
 尼	ny	272244
@@ -11233,6 +11270,7 @@ use_preset_vocabulary: false
 濞	p	191
 裒	p	189
 郫	p	187
+巿	p	179
 胼	p	175
 旆	p	169
 磻	p	160
@@ -11308,6 +11346,7 @@ use_preset_vocabulary: false
 玶	p	2
 砯	p	2
 㛹	p	1
+㞎	p	1
 䥽	p	1
 冯	p	1
 否	p	1
@@ -11490,6 +11529,7 @@ use_preset_vocabulary: false
 掱	pr	13
 钯	pr	5
 潖	pr	2
+㞎	pr	1
 舥	pr	1
 撇	ps	47004
 瞥	ps	38910
@@ -11537,6 +11577,7 @@ use_preset_vocabulary: false
 粕	pu	898
 笸	pu	325
 皤	pu	214
+巿	pu	179
 攴	pu	125
 钋	pu	81
 钷	pu	38
@@ -12587,6 +12628,7 @@ use_preset_vocabulary: false
 瀼	r	22
 蒻	r	20
 嬬	r	18
+緌	r	15
 叡	r	11
 蘘	r	11
 铷	r	11
@@ -12603,8 +12645,10 @@ use_preset_vocabulary: false
 瓀	r	3
 讱	r	3
 儴	r	2
+勷	r	2
 䎃	r	1
 媆	r	1
+峵	r	1
 挼	r	1
 𦈡	r	1
 𫐓	r	1
@@ -12617,6 +12661,7 @@ use_preset_vocabulary: false
 蕤	rb	503
 枘	rb	95
 汭	rb	35
+緌	rb	15
 叡	rb	11
 热	rf	625680
 惹	rf	125358
@@ -12644,6 +12689,7 @@ use_preset_vocabulary: false
 狨	rj	158
 瑢	rj	116
 肜	rj	7
+峵	rj	1
 任	rk	18435296
 人	rk	18435295
 认	rk	1184729
@@ -12674,6 +12720,7 @@ use_preset_vocabulary: false
 瀼	rl	22
 蘘	rl	11
 儴	rl	2
+勷	rl	2
 如	rn	4308194
 入	rn	1472056
 辱	rn	85827
@@ -13558,6 +13605,7 @@ use_preset_vocabulary: false
 萚	t	1
 跅	t	1
 鄌	t	1
+鿎	t	1
 𦒍	t	1
 𫍣	t	1
 𫘦	t	1
@@ -13802,6 +13850,7 @@ use_preset_vocabulary: false
 鞳	tr	6
 嗒	tr	1
 榙	tr	1
+鿎	tr	1
 头	ts	4813712
 铁	ts	520031
 投	ts	373978
@@ -14263,6 +14312,7 @@ use_preset_vocabulary: false
 奓	u	50
 单	u	47
 骦	u	45
+唦	u	43
 陞	u	42
 掸	u	39
 蒴	u	39
@@ -14310,10 +14360,12 @@ use_preset_vocabulary: false
 柖	u	1
 浉	u	1
 漺	u	1
+灀	u	1
 玿	u	1
 琡	u	1
 畬	u	1
 羴	u	1
+虵	u	1
 襫	u	1
 陎	u	1
 𪨶	u	1
@@ -14359,6 +14411,7 @@ use_preset_vocabulary: false
 揲	uf	3
 拾	uf	1
 畬	uf	1
+虵	uf	1
 𪨶	uf	1
 拴	ug	10430
 栓	ug	10429
@@ -14515,6 +14568,7 @@ use_preset_vocabulary: false
 歃	ur	749
 痧	ur	379
 唼	ur	70
+唦	ur	43
 杉	ur	2
 收	us	5076180
 手	us	5076179
@@ -14599,6 +14653,7 @@ use_preset_vocabulary: false
 泷	ux	7
 礵	ux	6
 漺	ux	1
+灀	ux	1
 时	uy	31422713
 是	uy	31422712
 事	uy	4729336
@@ -14958,6 +15013,7 @@ use_preset_vocabulary: false
 𬘫	w	3
 琟	w	2
 硙	w	2
+蚖	w	2
 踒	w	2
 軎	w	2
 鳁	w	2
@@ -15149,6 +15205,7 @@ use_preset_vocabulary: false
 卐	wt	10
 𬇕	wt	3
 𬘫	wt	3
+蚖	wt	2
 妧	wt	1
 握	wu	29569262
 我	wu	29569261
@@ -15746,6 +15803,7 @@ use_preset_vocabulary: false
 饧	x	241
 狝	x	234
 瑷	x	232
+鞥	x	231
 洫	x	224
 轭	x	222
 柙	x	216
@@ -15922,11 +15980,13 @@ use_preset_vocabulary: false
 觿	x	3
 诇	x	3
 颉	x	3
+勷	x	2
 嶍	x	2
 揞	x	2
 暅	x	2
 涍	x	2
 蟏	x	2
+詨	x	2
 𬭳	x	2
 𬸣	x	2
 㙦	x	1
@@ -15984,6 +16044,7 @@ use_preset_vocabulary: false
 𬩽	x	1
 𬮿	x	1
 𬹼	x	1
+噷	x	0.6
 𫄧	x	0.1
 续	x;	1299513
 许	x;	1299512
@@ -16055,6 +16116,7 @@ use_preset_vocabulary: false
 枔	xb	5
 嬜	xb	1
 𫷷	xb	1
+噷	xb	0.6
 小	xc	6383822
 笑	xc	3577465
 消	xc	792838
@@ -16096,6 +16158,7 @@ use_preset_vocabulary: false
 皛	xc	4
 涍	xc	2
 蟏	xc	2
+詨	xc	2
 恔	xc	1
 敩	xc	1
 𫍲	xc	1
@@ -16365,6 +16428,7 @@ use_preset_vocabulary: false
 峏	xn	1
 嗯	xp	9179528
 唔	xp	1126
+鞥	xp	231
 修	xq	678749
 秀	xq	364108
 休	xq	334462
@@ -16589,6 +16653,7 @@ use_preset_vocabulary: false
 葙	xx	40
 珦	xx	29
 蟓	xx	6
+勷	xx	2
 𬙋	xx	1
 西	xy	2290307
 洗	xy	2290306
@@ -17718,6 +17783,7 @@ use_preset_vocabulary: false
 囃	z	4
 鼒	z	4
 噂	z	3
+墫	z	3
 䎖	z	1
 壿	z	1
 寁	z	1
@@ -17882,6 +17948,7 @@ use_preset_vocabulary: false
 鲗	zw	10
 僔	zw	4
 噂	zw	3
+墫	zw	3
 壿	zw	1
 嶟	zw	1
 𨱔	zw	1
