@@ -1,12 +1,12 @@
 # Rime schema
 # encoding: utf-8
 #
-# 键道27C・流
+# 贰柒C・函流
 # 支持用户调频造词的 键道27C 输入法
 
 schema:
   schema_id: xkjd27c_flow
-  name: 键道27C・流
+  name: 贰柒C・函流
   version: "1.0"
   description: |
     键道27C 的 无固定码表方案
@@ -66,12 +66,10 @@ translator:
 flow_engine:
   sound_keys: "bcdfghjklmnpqrstuwxyz;"   # 声母键
   shape_keys: "aeiov"    # 笔形键
-  # 动作键；create / delete 不写就跟 promote / demote 同键
+  # 动作键（- / =）：正常模式调序，造词/声笔调整模式做对应动作
   bindings:
-    promote: minus       # 调序上调
-    demote: equal        # 降档延长
-    create: minus        # 造词入库
-    delete: equal        # 造词删除
+    promote: minus       # 调序上调 / 造词入库 / 声笔设为 sb
+    demote: equal        # 降档延长 / 造词删除 / 声笔设为 sbb
 
 # 调序与造词引擎数据库
 flow_order:
