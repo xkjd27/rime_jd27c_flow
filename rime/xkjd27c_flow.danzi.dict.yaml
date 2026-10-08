@@ -1355,7 +1355,6 @@ use_preset_vocabulary: false
 瘩	dr	4
 答	dr	4
 达	dr	4
-鿎	dr	3.166667
 哒	dr	3
 嗒	dr	3
 嗲	dr	3
@@ -1370,8 +1369,8 @@ use_preset_vocabulary: false
 褡	dr	3
 迚	dr	3
 鞑	dr	3
+鿎	dr	3
 𨱏	dr	3
-	dr	2.333333
 呾	dr	2
 惮	dr	2
 炟	dr	2
@@ -2408,9 +2407,9 @@ use_preset_vocabulary: false
 陨	fw	3
 霏	fw	3
 韵	fw	3
-绯	fw	2.375
 扉	fw	2.333333
 涢	fw	2.333333
+绯	fw	2.333333
 孕	fw	2.166667
 氲	fw	2.166667
 郧	fw	2.166667
@@ -2444,10 +2443,9 @@ use_preset_vocabulary: false
 淝	fw	1.333333
 郓	fw	1.333333
 馧	fw	1.333333
-	fw	1.25
 橒	fw	1.166667
 贠	fw	1.166667
-𬴂	fw	1.125
+𬴂	fw	1.166667
 剕	fw	1
 狁	fw	1
 筼	fw	1
@@ -2803,10 +2801,9 @@ use_preset_vocabulary: false
 纲	gl	3
 肛	gl	3
 筻	gl	2.333333
-	gl	2.333333
-鿍	gl	2.166667
 冈	gl	2
 罡	gl	2
+鿍	gl	2
 古	gn	5.333333
 固	gn	4.25
 姑	gn	4
@@ -6936,9 +6933,7 @@ use_preset_vocabulary: false
 沓	tr	4
 獭	tr	4
 拓	tr	3.333333
-	tr	3.333333
 鞳	tr	3.166667
-鿎	tr	3.166667
 塌	tr	3
 溻	tr	3
 漯	tr	3
@@ -6946,6 +6941,7 @@ use_preset_vocabulary: false
 踏	tr	3
 铊	tr	3
 鳎	tr	3
+鿎	tr	3
 𲎿	tr	3
 𲰼	tr	3
 榙	tr	2.333333
