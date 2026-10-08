@@ -1,3 +1,3 @@
 [submodule "rime/lua"]
 	path = rime/lua
-	url = https://github.com/xkjd27/flow_engine_lua
+	url = https://github.com/xkjd27/flow_engine

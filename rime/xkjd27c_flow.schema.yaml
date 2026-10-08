@@ -62,7 +62,7 @@ translator:
   enable_encoder: false
   enable_charset_filter: false
 
-# 引擎（flow_engine_lua）需要的键位表 —— 两套方案的差异主要在这两个字母表
+# 引擎（flow_engine）需要的键位表 —— 两套方案的差异主要在这两个字母表
 flow_engine:
   sound_keys: "bcdfghjklmnpqrstuwxyz;"   # 声母键
   shape_keys: "aeiov"    # 笔形键
