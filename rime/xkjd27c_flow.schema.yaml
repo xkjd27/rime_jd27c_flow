@@ -62,10 +62,16 @@ translator:
   enable_encoder: false
   enable_charset_filter: false
 
-# 引擎（flow_engine_lua）需要的键位表 —— 两套方案的差异就在这两个字母表
+# 引擎（flow_engine_lua）需要的键位表 —— 两套方案的差异主要在这两个字母表
 flow_engine:
   sound_keys: "bcdfghjklmnpqrstuwxyz;"   # 声母键
   shape_keys: "aeiov"    # 笔形键
+  # 动作键；create / delete 不写就跟 promote / demote 同键
+  bindings:
+    promote: minus       # 调序上调
+    demote: equal        # 降档延长
+    create: minus        # 造词入库
+    delete: equal        # 造词删除
 
 # 调序与造词引擎数据库
 flow_order:
