@@ -1,0 +1,40 @@
+# 打 tag（v0.0.1 这种）就发一个 Release，附上装输入法真正要用的东西：
+#   方案与词库（rime/）、引擎 lua（flow_engine 子模块）、说明与许可（含布局图）。
+# 不带 .git、构建脚本、__pycache__、引擎里跟运行时无关的部分。
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive          # 引擎（lua）在 flow_engine 子模块里
+      - name: 打包
+        run: |
+          set -euo pipefail
+          NAME="${GITHUB_REPOSITORY##*/}"
+          VER="${GITHUB_REF_NAME}"
+          DEST="dist/$NAME-$VER"
+          mkdir -p "$DEST/lua" "$DEST/docs"
+          cp rime/*.yaml rime/*.txt "$DEST/"      # 方案、形码表、词库
+          cp engine/lua/*.lua "$DEST/lua/"        # 引擎（三个方案共用）
+          cp README.md LICENSE "$DEST/"
+          cp docs/layout.png "$DEST/docs/" 2>/dev/null || rmdir "$DEST/docs"
+          cd dist
+          zip -qr "$NAME-$VER.zip" "$NAME-$VER"
+          sha256sum "$NAME-$VER.zip" > "$NAME-$VER.zip.sha256"
+          unzip -l "$NAME-$VER.zip" | tail -3
+      - name: 发 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.sha256 \
+            --title "$GITHUB_REF_NAME" --generate-notes
