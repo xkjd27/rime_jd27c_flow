@@ -67,15 +67,9 @@ flow_engine:
   sound_keys: "bcdfghjklmnpqrstuwxyz;"   # 声母键
   shape_keys: "aeiov"    # 笔形键
   # 动作键（- / =）：正常模式调序，造词/声笔调整模式做对应动作
-  # 翻页键（[ / ]）：能翻就翻，到头按 page_edge 处理
   bindings:
     promote: minus       # 调序上调 / 造词入库 / 声笔设为 sb
     demote: equal        # 降档延长 / 造词删除 / 声笔设为 sbb
-    prev_page: bracketleft    # 上一页
-    next_page: bracketright   # 下一页
-  # 翻页到头（第一页再往前 / 最后一页再往后）：
-  # ignore 吞掉 | topup 顶屏（当前内容上屏）| pass 交给后面的处理器（[ 出「）
-  page_edge: topup
 
 # 调序与造词引擎数据库
 flow_order:
@@ -173,5 +167,5 @@ key_binder:
   bindings:
     - {when: always, accept: F6, select: .next }
     - {when: always, accept: F7, toggle: jffh }
-    # [ ] 翻页交给引擎（flow_engine/bindings/prev_page / next_page）：
-    # 引擎要先看到按键，才能「翻不动了就顶屏」（flow_engine/page_edge）
+    - {when: paging, accept: bracketleft, send: Page_Up }
+    - {when: has_menu, accept: bracketright, send: Page_Down }
