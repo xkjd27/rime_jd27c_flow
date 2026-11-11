@@ -5,7 +5,7 @@
 布局表从本方案迁入引擎前的 ``tools/build_flow_dict.py`` 原样搬来
 （来源：上游 ``rime_jd27c/Lambda/Layout.py``，另含上游没有的 ``'nve': 'nue'``）。
 数据在引擎仓库 ``data/``（ZiDB 取 27C 版，两边共用）。
-``SOURCE`` / ``OUT`` 若是相对路径，按本文件所在目录解析。
+``SOURCE`` / ``CIDB`` / ``OUT`` 若是相对路径，按本文件所在目录解析。
 """
 
 # ---- 构建元信息 ----
@@ -13,6 +13,7 @@ NAME = 'xkjd27c_flow'          # 输出前缀
 TITLE = '键道27C Flow'          # 词库文件头里的中文名
 SHAPE_SECTION = '形简'          # 上游 补充.txt 里的纯形码段名
 SOURCE = 'engine/data'         # 引擎仓库里的数据目录（ZiDB 用 27C 版，共用）
+CIDB = 'data/CiDB'             # 原版 CiDB（词组权重，取自上游本方案仓库的 Lambda/CiDB）
 OUT = 'rime'                   # 输出目录
 
 # ---- 布局表（原样搬自旧脚本） ----
